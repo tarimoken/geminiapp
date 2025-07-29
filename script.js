@@ -587,6 +587,3 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- START THE APP ---
     initialize();
 });
-</script>
-</body>
-</html>
