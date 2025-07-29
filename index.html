@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ギターコード・スケール ビジュアライザー</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- SortableJS for Drag and Drop -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <!-- 外部CSSファイルをリンク -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-start min-h-screen p-2 sm:p-4">
+
+    <div class="w-full max-w-[1920px] mx-auto">
+        <!-- Fretboard Display -->
+        <div id="fretboard-container" class="relative fretboard-bg rounded-lg p-2 sm:p-6 mb-3 overflow-hidden"></div>
+
+        <!-- Controls -->
+        <div id="controls-container" class="bg-white p-2 rounded-lg shadow-md mb-3">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <!-- Control sections... -->
+                <div>
+                    <h3 class="font-bold text-sm mb-1 text-gray-700">コードタイプ</h3>
+                    <div id="chord-type-selector" class="grid grid-cols-2 sm:grid-cols-3 gap-1"></div>
+                </div>
+                <div>
+                    <h3 class="font-bold text-sm mb-1 text-gray-700">テンション</h3>
+                    <div id="tension-selector" class="grid grid-cols-2 sm:grid-cols-3 gap-1"></div>
+                </div>
+                <div>
+                    <h3 class="font-bold text-sm mb-1 text-gray-700">ベースノート (On)</h3>
+                    <select id="bass-note-selector" class="w-full border border-gray-300 rounded-md p-1.5 text-sm bg-white"></select>
+                </div>
+                <div class="space-y-2">
+                     <h3 class="font-bold text-sm mb-1 text-gray-700">スケール &amp; 表示設定</h3>
+                     <div class="flex items-center justify-between">
+                         <span class="font-medium text-xs text-gray-600">メジャーペンタ</span>
+                         <label class="toggle-switch"><input type="checkbox" id="major-penta-toggle"><span class="slider"></span></label>
+                     </div>
+                     <div class="flex items-center justify-between">
+                         <span class="font-medium text-xs text-gray-600">マイナーペンタ</span>
+                         <label class="toggle-switch"><input type="checkbox" id="minor-penta-toggle"><span class="slider"></span></label>
+                     </div>
+                     <div class="flex items-center justify-between">
+                        <span id="degree-toggle-label" class="font-medium text-xs text-gray-600">度数で表示</span>
+                        <label class="toggle-switch"><input type="checkbox" id="degree-display-toggle" disabled><span class="slider"></span></label>
+                    </div>
+                     <div class="flex items-center justify-between pt-1 border-t mt-1">
+                        <label for="fret-count-input" class="font-medium text-xs text-gray-600">フレット数</label>
+                        <input type="number" id="fret-count-input" value="15" min="12" max="24" class="w-16 border border-gray-300 rounded-md p-0.5 text-center text-xs">
+                    </div>
+                </div>
+            </div>
+            <div class="mt-2 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
+                <button id="save-chord-button" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1.5 sm:py-1 px-4 rounded-md transition-colors text-sm">現在のコードをプリセットに追加</button>
+                <button id="reset-button" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-1.5 sm:py-1 px-4 rounded-md transition-colors text-sm">選択をリセット</button>
+            </div>
+        </div>
+
+        <!-- Saved Chords (Presets) -->
+        <div id="presets-container" class="bg-white p-3 rounded-lg shadow-md space-y-3">
+            <!-- Progression Management -->
+            <div>
+                <h3 class="font-bold text-base mb-2 text-gray-700">コード進行の管理</h3>
+                <div class="flex flex-wrap items-center gap-2">
+                    <input type="text" id="progression-name-input" class="w-full sm:flex-1 border border-gray-300 rounded-md p-1.5 text-sm" placeholder="進行の名前 (例: Aメロ)">
+                    <button id="save-progression-button" class="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-4 rounded-md transition-colors text-sm">進行を保存</button>
+                    <select id="progression-selector" class="w-full sm:flex-1 border border-gray-300 rounded-md p-1.5 text-sm">
+                        <option value="">保存した進行を読込...</option>
+                    </select>
+                    <button id="delete-progression-button" class="w-full sm:w-auto bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-4 rounded-md transition-colors text-sm" disabled>選択中の進行を削除</button>
+                </div>
+            </div>
+
+            <!-- Current Progression Editor -->
+            <div>
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-2">
+                     <h3 class="font-bold text-base text-gray-700">現在のコード進行 (ドラッグ&ドロップで並べ替え)</h3>
+                     <button id="clear-progression-button" class="w-full sm:w-auto bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-1 px-4 rounded-md transition-colors text-sm">クリア</button>
+                </div>
+                <div id="saved-chords-container" class="flex flex-wrap gap-2 min-h-[40px] border border-dashed border-gray-300 rounded-lg p-2">
+                    <span id="presets-placeholder" class="text-gray-400 text-sm">「現在のコードをプリセットに追加」ボタンでコードを追加します。</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 外部JavaScriptファイルをリンク -->
+    <script src="script.js"></script>
+</body>
+</html>
