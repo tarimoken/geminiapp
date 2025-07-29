@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <!-- SortableJS for Drag and Drop -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-    <!-- 外部CSSファイルをリンク -->
+    <!-- Link to your external CSS file -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-gray-100 flex flex-col items-center justify-start min-h-screen p-2 sm:p-4">
@@ -19,22 +19,25 @@
 
         <!-- Controls -->
         <div id="controls-container" class="bg-white p-2 rounded-lg shadow-md mb-3">
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <!-- Control sections... -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div class="flex items-center bg-gray-100 p-2 rounded-lg lg:col-span-1">
+                    <span class="font-bold text-sm text-gray-700 mr-2">コード:</span>
+                    <span id="full-chord-name-display" class="font-mono text-lg font-bold text-red-500">--</span>
+                </div>
+
                 <div>
                     <h3 class="font-bold text-sm mb-1 text-gray-700">コードタイプ</h3>
-                    <div id="chord-type-selector" class="grid grid-cols-2 sm:grid-cols-3 gap-1"></div>
+                    <div id="chord-type-selector" class="grid grid-cols-3 gap-1"></div>
                 </div>
                 <div>
                     <h3 class="font-bold text-sm mb-1 text-gray-700">テンション</h3>
-                    <div id="tension-selector" class="grid grid-cols-2 sm:grid-cols-3 gap-1"></div>
-                </div>
-                <div>
-                    <h3 class="font-bold text-sm mb-1 text-gray-700">ベースノート (On)</h3>
-                    <select id="bass-note-selector" class="w-full border border-gray-300 rounded-md p-1.5 text-sm bg-white"></select>
+                    <div id="tension-selector" class="grid grid-cols-3 gap-1"></div>
                 </div>
                 <div class="space-y-2">
-                     <h3 class="font-bold text-sm mb-1 text-gray-700">スケール &amp; 表示設定</h3>
+                    <div>
+                        <h3 class="font-bold text-sm mb-1 text-gray-700">ベースノート (On)</h3>
+                        <select id="bass-note-selector" class="w-full border border-gray-300 rounded-md p-1.5 text-sm bg-white"></select>
+                    </div>
                      <div class="flex items-center justify-between">
                          <span class="font-medium text-xs text-gray-600">メジャーペンタ</span>
                          <label class="toggle-switch"><input type="checkbox" id="major-penta-toggle"><span class="slider"></span></label>
@@ -56,6 +59,27 @@
             <div class="mt-2 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
                 <button id="save-chord-button" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1.5 sm:py-1 px-4 rounded-md transition-colors text-sm">現在のコードをプリセットに追加</button>
                 <button id="reset-button" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-1.5 sm:py-1 px-4 rounded-md transition-colors text-sm">選択をリセット</button>
+            </div>
+        </div>
+        
+        <!-- Diatonic Chords Panel -->
+        <div id="diatonic-container" class="bg-white p-3 rounded-lg shadow-md mb-3">
+            <h3 class="font-bold text-base mb-2 text-gray-700">ダイアトニックコード</h3>
+            <div class="flex flex-wrap items-center gap-4 mb-2">
+                <div>
+                    <label for="diatonic-key-selector" class="font-bold text-sm text-gray-600 mr-2">キー:</label>
+                    <select id="diatonic-key-selector" class="border border-gray-300 rounded-md p-1.5 text-sm bg-white"></select>
+                </div>
+                <div>
+                    <label for="diatonic-mode-selector" class="font-bold text-sm text-gray-600 mr-2">モード:</label>
+                    <select id="diatonic-mode-selector" class="border border-gray-300 rounded-md p-1.5 text-sm bg-white">
+                        <option value="major">メジャー</option>
+                        <option value="minor">マイナー</option>
+                    </select>
+                </div>
+            </div>
+            <div id="diatonic-chords-container" class="flex flex-wrap gap-2">
+                <!-- Diatonic chord buttons will be generated here -->
             </div>
         </div>
 
@@ -85,9 +109,10 @@
                 </div>
             </div>
         </div>
+
     </div>
 
-    <!-- 外部JavaScriptファイルをリンク -->
+    <!-- Link to your external JavaScript file -->
     <script src="script.js"></script>
 </body>
 </html>

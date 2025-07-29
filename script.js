@@ -26,20 +26,23 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     const SCALES = {
-        'majorPentatonic': { name: 'Major Pentatonic', intervals: [0, 2, 4, 7, 9] },
-        'minorPentatonic': { name: 'Minor Pentatonic', intervals: [0, 3, 5, 7, 10] },
+        majorPentatonic: { name: 'Major Pentatonic', intervals: [0, 2, 4, 7, 9] },
+        minorPentatonic: { name: 'Minor Pentatonic', intervals: [0, 3, 5, 7, 10] },
+    };
+
+    const DIATONIC_PATTERNS = {
+        major: { intervals: [0, 2, 4, 5, 7, 9, 11], types: ['Maj', 'min', 'min', 'Maj', 'Maj', 'min', 'dim'] },
+        minor: { intervals: [0, 2, 3, 5, 7, 8, 10], types: ['min', 'dim', 'Maj', 'min', 'min', 'Maj', 'Maj'] }
     };
     
     const ACTIVE_CLASS_MAP = {
-        rootNote: 'active-root',
         chordType: 'active-type',
         tensions: 'active-tension'
     };
 
-
     // --- UI ELEMENT REFERENCES ---
     const fretboardContainer = document.getElementById('fretboard-container');
-    const controlsContainer = document.getElementById('controls-container');
+    const fullChordNameDisplay = document.getElementById('full-chord-name-display');
     const chordTypeSelector = document.getElementById('chord-type-selector');
     const tensionSelector = document.getElementById('tension-selector');
     const bassNoteSelector = document.getElementById('bass-note-selector');
@@ -57,6 +60,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const progressionSelector = document.getElementById('progression-selector');
     const deleteProgressionButton = document.getElementById('delete-progression-button');
     const clearProgressionButton = document.getElementById('clear-progression-button');
+    const diatonicKeySelector = document.getElementById('diatonic-key-selector');
+    const diatonicModeSelector = document.getElementById('diatonic-mode-selector');
+    const diatonicChordsContainer = document.getElementById('diatonic-chords-container');
 
     let fretboardGrid = [];
     let currentChordPreset = [];
@@ -73,9 +79,11 @@ document.addEventListener('DOMContentLoaded', () => {
         loadProgressionsFromStorage();
         createFretboard();
         createControlButtons();
+        setupDiatonicPanel();
         addEventListeners();
         initializeSortable();
         renderProgressionSelector();
+        updateControlsFromState();
         updateDisplay();
     }
     
@@ -93,13 +101,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function createFretboard() {
         fretboardContainer.innerHTML = '';
         fretboardGrid = [];
-
-        // Wrapper for horizontal scrolling on small screens
         const scrollWrapper = document.createElement('div');
         scrollWrapper.className = 'fretboard-scroll-wrapper overflow-x-auto pb-2';
-
         const board = document.createElement('div');
-        board.className = 'grid gap-y-1 min-w-[700px]'; // Set min-width to ensure layout before scrolling
+        board.className = 'grid gap-y-1 min-w-[700px]';
         board.style.gridTemplateRows = `repeat(${STRING_COUNT}, 24px)`;
 
         for (let s = 0; s < STRING_COUNT; s++) {
@@ -118,8 +123,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 fretCell.appendChild(noteDisplay);
                 stringRow.appendChild(fretCell);
                 fretboardGrid[s][f] = { element: fretCell, noteDisplay: noteDisplay, noteIndex: noteIndex };
-                
-                // Add click listener to the fret cell
                 fretCell.addEventListener('click', () => handleFretClick(noteIndex));
             }
             const stringLine = document.createElement('div');
@@ -133,20 +136,44 @@ document.addEventListener('DOMContentLoaded', () => {
         scrollWrapper.appendChild(board);
 
         const fretNumberRow = document.createElement('div');
-        fretNumberRow.className = 'grid mt-2 min-w-[700px]'; // Match min-width
+        fretNumberRow.className = 'grid mt-2 min-w-[700px]';
         fretNumberRow.style.gridTemplateColumns = `repeat(${FRET_COUNT + 1}, 1fr)`;
+
+        const MARKER_FRETS = [3, 5, 7, 9, 15, 17, 19];
+        const DOUBLE_MARKER_FRET = 12;
+
         for (let f = 0; f <= FRET_COUNT; f++) {
-            const fretNum = document.createElement('div');
-            fretNum.className = 'text-center text-xs sm:text-sm font-bold text-gray-700';
+            const fretNumContainer = document.createElement('div');
+            fretNumContainer.className = 'text-center text-xs sm:text-sm font-bold text-gray-700 h-8 flex flex-col items-center justify-start';
+
+            const markerContainer = document.createElement('div');
+            markerContainer.className = 'h-4 flex items-center justify-center gap-x-1.5';
+
+            if (MARKER_FRETS.includes(f)) {
+                const marker = document.createElement('div');
+                marker.className = 'w-2 h-2 bg-gray-800 rounded-full';
+                markerContainer.appendChild(marker);
+            } else if (f === DOUBLE_MARKER_FRET) {
+                const marker1 = document.createElement('div');
+                marker1.className = 'w-2 h-2 bg-gray-800 rounded-full';
+                const marker2 = document.createElement('div');
+                marker2.className = 'w-2 h-2 bg-gray-800 rounded-full';
+                markerContainer.appendChild(marker1);
+                markerContainer.appendChild(marker2);
+            }
+            
+            const fretNum = document.createElement('span');
             fretNum.textContent = f;
-            fretNumberRow.appendChild(fretNum);
+
+            fretNumContainer.appendChild(markerContainer);
+            fretNumContainer.appendChild(fretNum);
+            fretNumberRow.appendChild(fretNumContainer);
         }
         scrollWrapper.appendChild(fretNumberRow);
         fretboardContainer.appendChild(scrollWrapper);
     }
 
     function createControlButtons() {
-        // Create Bass Note Dropdown
         const rootNotes = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'];
         bassNoteSelector.innerHTML = '<option value="">なし</option>';
         rootNotes.forEach(note => {
@@ -156,7 +183,6 @@ document.addEventListener('DOMContentLoaded', () => {
             bassNoteSelector.appendChild(option);
         });
 
-        // Create other buttons
         const chordTypes = ['Maj', 'min', 'dim', 'aug', 'sus2', 'sus4'];
         createButtons(chordTypeSelector, chordTypes, 'chordType', 'single');
         const tensions = ['7th', 'M7th', 'b9', '9', '#9', '11', '#11', 'b13', '13th'];
@@ -173,19 +199,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- EVENT HANDLING ---
     function addEventListeners() {
-        controlsContainer.addEventListener('click', (e) => {
+        document.getElementById('controls-container').addEventListener('click', (e) => {
             if (e.target.matches('.control-btn')) {
                 handleButtonClick(e);
             }
         });
-        
         bassNoteSelector.addEventListener('change', (e) => {
             state.bassNote = e.target.value || null;
+            updateControlsFromState();
             updateDisplay();
         });
-
         majorPentaToggle.addEventListener('change', (e) => { state.showMajorPenta = e.target.checked; updateDisplay(); });
         minorPentaToggle.addEventListener('change', (e) => { state.showMinorPenta = e.target.checked; updateDisplay(); });
         degreeDisplayToggle.addEventListener('change', (e) => { state.displayAsDegrees = e.target.checked; updateDisplay(); });
@@ -202,45 +226,33 @@ document.addEventListener('DOMContentLoaded', () => {
         progressionSelector.addEventListener('change', loadProgression);
         deleteProgressionButton.addEventListener('click', deleteProgression);
         clearProgressionButton.addEventListener('click', clearCurrentProgression);
+        diatonicKeySelector.addEventListener('change', renderDiatonicChords);
+        diatonicModeSelector.addEventListener('change', renderDiatonicChords);
     }
     
     function handleFretClick(noteIndex) {
         const newRootNote = NOTES[noteIndex];
-        if (state.rootNote === newRootNote) {
-            state.rootNote = null;
-        } else {
-            state.rootNote = newRootNote;
-        }
+        state.rootNote = state.rootNote === newRootNote ? null : newRootNote;
         updateControlsFromState();
         updateDisplay();
     }
 
     function handleButtonClick(e) {
         const { key, value, type } = e.target.dataset;
-        const activeClass = ACTIVE_CLASS_MAP[key];
+        if (!key) return;
 
         if (type === 'single') {
-            const isActive = e.target.classList.contains(activeClass);
-            e.target.parentElement.querySelectorAll('.control-btn').forEach(btn => {
-                if (btn.dataset.key === key) {
-                    Object.values(ACTIVE_CLASS_MAP).forEach(cls => btn.classList.remove(cls));
-                }
-            });
-
-            if (!isActive) {
-                e.target.classList.add(activeClass);
-                state[key] = value;
+            state[key] = state[key] === value ? null : value;
+        } else if (type === 'multiple') {
+            if (!Array.isArray(state[key])) state[key] = [];
+            const index = state[key].indexOf(value);
+            if (index > -1) {
+                state[key].splice(index, 1);
             } else {
-                state[key] = null;
-            }
-        } else { // Multiple selection type
-            e.target.classList.toggle(activeClass);
-            if (e.target.classList.contains(activeClass)) {
-                if (!state[key].includes(value)) state[key].push(value);
-            } else {
-                state[key] = state[key].filter(v => v !== value);
+                state[key].push(value);
             }
         }
+        updateControlsFromState();
         updateDisplay();
     }
 
@@ -250,13 +262,13 @@ document.addEventListener('DOMContentLoaded', () => {
         updateDisplay();
     }
     
-    // --- PRESET/PROGRESSION LOGIC ---
     function saveChordToPreset() {
-        if (!state.rootNote) { 
+        const chordName = generateChordName(state);
+        if (!state.rootNote || chordName === '--') { 
             alert('コードをプリセットに追加するには、まずフレットボードをクリックしてルートノートを選択してください。'); 
             return; 
         }
-        const newSavedChord = { id: Date.now().toString(), name: generateChordName(state), state: JSON.parse(JSON.stringify(state)) };
+        const newSavedChord = { id: Date.now().toString(), name: chordName, state: JSON.parse(JSON.stringify(state)) };
         currentChordPreset.push(newSavedChord);
         renderCurrentProgression();
     }
@@ -274,26 +286,20 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderCurrentProgression() {
         savedChordsContainer.innerHTML = '';
         if (currentChordPreset.length === 0) { 
-            if (!document.getElementById('presets-placeholder')) {
-                savedChordsContainer.appendChild(presetsPlaceholder);
-            }
-        } 
-        else { 
-            const placeholder = document.getElementById('presets-placeholder');
-            if(placeholder) placeholder.remove(); 
+            savedChordsContainer.appendChild(presetsPlaceholder);
+        } else {
+            currentChordPreset.forEach(chord => {
+                const btn = document.createElement('div');
+                btn.className = 'saved-chord-btn bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow transition-colors';
+                btn.textContent = chord.name; btn.dataset.id = chord.id;
+                btn.addEventListener('click', () => recallChordState(chord.id));
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-chord-btn'; deleteBtn.innerHTML = '&times;';
+                deleteBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteChordFromPreset(id); });
+                btn.appendChild(deleteBtn);
+                savedChordsContainer.appendChild(btn);
+            });
         }
-
-        currentChordPreset.forEach(chord => {
-            const btn = document.createElement('div');
-            btn.className = 'saved-chord-btn bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow transition-colors';
-            btn.textContent = chord.name; btn.dataset.id = chord.id;
-            btn.addEventListener('click', () => recallChordState(chord.id));
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'delete-chord-btn'; deleteBtn.innerHTML = '&times;';
-            deleteBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteChordFromPreset(chord.id); });
-            btn.appendChild(deleteBtn);
-            savedChordsContainer.appendChild(btn);
-        });
     }
     
     function saveProgression() {
@@ -358,32 +364,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function updateControlsFromState() {
+        fullChordNameDisplay.textContent = generateChordName(state);
+        
         document.querySelectorAll('.control-btn').forEach(btn => {
             const { key, value, type } = btn.dataset;
-            Object.values(ACTIVE_CLASS_MAP).forEach(cls => btn.classList.remove(cls));
             const activeClass = ACTIVE_CLASS_MAP[key];
             if (!activeClass) return;
 
-            let isActive = false;
+            let shouldBeActive = false;
             if (type === 'single') {
-                isActive = state[key] === value;
-            } else { // 'multiple'
-                isActive = Array.isArray(state[key]) && state[key].includes(value);
+                shouldBeActive = state[key] === value;
+            } else {
+                shouldBeActive = Array.isArray(state[key]) && state[key].includes(value);
             }
-            if (isActive) {
-                btn.classList.add(activeClass);
-            }
+            btn.classList.toggle(activeClass, shouldBeActive);
         });
         
-        // Update bass note dropdown
         bassNoteSelector.value = state.bassNote || '';
-
         majorPentaToggle.checked = state.showMajorPenta;
         minorPentaToggle.checked = state.showMinorPenta;
         degreeDisplayToggle.checked = state.displayAsDegrees;
     }
 
-    // --- DISPLAY LOGIC ---
     function updateDisplay() {
         const isRootSelected = !!state.rootNote;
         degreeDisplayToggle.disabled = !isRootSelected;
@@ -396,7 +398,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (!isRootSelected) return;
 
-        const rootNoteIndex = NOTES.indexOf(state.rootNote) !== -1 ? NOTES.indexOf(state.rootNote) : NOTES_FLAT.indexOf(state.rootNote);
+        const rootNoteIndex = NOTES.indexOf(state.rootNote);
         if (rootNoteIndex === -1) return;
         if (state.showMajorPenta) highlightScale(calculateScaleNotes(rootNoteIndex, 'majorPentatonic'), 'major-penta');
         if (state.showMinorPenta) highlightScale(calculateScaleNotes(rootNoteIndex, 'minorPentatonic'), 'minor-penta');
@@ -405,7 +407,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chordData.intervals.forEach((interval, i) => { const noteIndex = (rootNoteIndex + interval) % 12; chordNoteMap[noteIndex] = chordData.degrees[i]; });
         highlightChord(chordNoteMap, rootNoteIndex);
         if (state.bassNote) {
-            const bassNoteIndex = NOTES.indexOf(state.bassNote) !== -1 ? NOTES.indexOf(state.bassNote) : NOTES_FLAT.indexOf(state.bassNote);
+            const bassNoteIndex = NOTES.indexOf(state.bassNote);
             if (bassNoteIndex !== -1) highlightBassNote(bassNoteIndex);
         }
     }
@@ -413,7 +415,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function getDegreeName(noteIndex, rootIndex) { return DEGREE_NAMES[(noteIndex - rootIndex + 12) % 12]; }
     
     function clearAndResetBoard() {
-        const rootNoteIndex = state.rootNote ? (NOTES.indexOf(state.rootNote) !== -1 ? NOTES.indexOf(state.rootNote) : NOTES_FLAT.indexOf(state.rootNote)) : -1;
+        const rootNoteIndex = state.rootNote ? NOTES.indexOf(state.rootNote) : -1;
         for (let s = 0; s < STRING_COUNT; s++) {
             for (let f = 0; f <= FRET_COUNT; f++) {
                 if (!fretboardGrid[s] || !fretboardGrid[s][f]) continue;
@@ -524,7 +526,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function generateChordName(currentState) {
-        if (!currentState.rootNote) return 'N/A';
+        if (!currentState.rootNote) return '--';
         let name = currentState.rootNote;
         if (currentState.chordType) {
             name += CHORD_INTERVALS[currentState.chordType]?.notation || '';
@@ -542,7 +544,49 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return name;
     }
+    
+    // --- DIATONIC FUNCTIONS ---
+    function setupDiatonicPanel() {
+        NOTES.forEach(note => {
+            const option = document.createElement('option');
+            option.value = note;
+            option.textContent = note;
+            diatonicKeySelector.appendChild(option);
+        });
+        renderDiatonicChords();
+    }
+
+    function renderDiatonicChords() {
+        diatonicChordsContainer.innerHTML = '';
+        const key = diatonicKeySelector.value;
+        const mode = diatonicModeSelector.value;
+        const keyIndex = NOTES.indexOf(key);
+        if (keyIndex === -1) return;
+
+        const pattern = DIATONIC_PATTERNS[mode];
+        pattern.intervals.forEach((interval, i) => {
+            const rootNoteIndex = (keyIndex + interval) % 12;
+            const rootNoteName = NOTES[rootNoteIndex];
+            const chordType = pattern.types[i];
+            
+            const btn = document.createElement('button');
+            btn.className = 'diatonic-chord-btn border border-gray-400 bg-gray-100 hover:bg-gray-200 rounded py-2 px-3 text-sm font-semibold text-gray-800';
+            btn.textContent = `${rootNoteName}${CHORD_INTERVALS[chordType].notation}`;
+            btn.addEventListener('click', () => {
+                state.rootNote = rootNoteName;
+                state.chordType = chordType;
+                state.tensions = [];
+                state.bassNote = null;
+                updateControlsFromState();
+                updateDisplay();
+            });
+            diatonicChordsContainer.appendChild(btn);
+        });
+    }
 
     // --- START THE APP ---
     initialize();
 });
+</script>
+</body>
+</html>

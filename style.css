@@ -11,10 +11,10 @@ body {
     border-right: 2px solid #9ca3af;
     box-sizing: border-box;
     border-left: none;
-    cursor: pointer; /* Add cursor pointer to indicate clickability */
+    cursor: pointer;
 }
 .fret:hover {
-    background-color: #f3f4f6; /* Add a subtle hover effect */
+    background-color: #f3f4f6;
 }
 .string {
     background-color: #d1d5db;
@@ -61,12 +61,10 @@ body {
 .major-penta { background-color: #8b5cf6; }
 .minor-penta { background-color: #f97316; }
 
-.control-btn {
+.control-btn, .diatonic-chord-btn {
     transition: all 0.2s ease-in-out;
 }
 
-/* Active Button Colors */
-.control-btn.active-root { background-color: #ef4444; color: white; transform: scale(1.05); }
 .control-btn.active-type { background-color: #3b82f6; color: white; transform: scale(1.05); }
 .control-btn.active-tension { background-color: #facc15; color: #1f2937; transform: scale(1.05); }
 
@@ -116,18 +114,7 @@ button:disabled:hover {
     background-color: #d1d5db;
 }
 
-/* Custom scrollbar for fretboard */
-.fretboard-scroll-wrapper::-webkit-scrollbar {
-    height: 8px;
-}
-.fretboard-scroll-wrapper::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 10px;
-}
-.fretboard-scroll-wrapper::-webkit-scrollbar-thumb {
-    background: #a8a29e;
-    border-radius: 10px;
-}
-.fretboard-scroll-wrapper::-webkit-scrollbar-thumb:hover {
-    background: #78716c;
-}
+.fretboard-scroll-wrapper::-webkit-scrollbar { height: 8px; }
+.fretboard-scroll-wrapper::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+.fretboard-scroll-wrapper::-webkit-scrollbar-thumb { background: #a8a29e; border-radius: 10px; }
+.fretboard-scroll-wrapper::-webkit-scrollbar-thumb:hover { background: #78716c; }
