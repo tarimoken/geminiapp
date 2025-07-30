@@ -14,15 +14,15 @@ document.addEventListener('DOMContentLoaded', () => {
         'aug':  { name: 'Augmented', intervals: [0, 4, 8], degrees: ['R', '3', '♯5'], notation: 'aug'},
         'sus2': { name: 'Suspended 2', intervals: [0, 2, 7], degrees: ['R', '2', '5'], replaces: 3, notation: 'sus2' },
         'sus4': { name: 'Suspended 4', intervals: [0, 5, 7], degrees: ['R', '4', '5'], replaces: 3, notation: 'sus4' },
-        '7th':  { name: 'Dominant 7th', intervals: [10], degrees: ['♭7'], notation: '7' },
-        'M7th': { name: 'Major 7th', intervals: [11], degrees: ['7'], notation: 'M7' },
-        'b9':   { name: 'Flat 9th', intervals: [1], degrees: ['♭9'], notation: '(♭9)' },
-        '9':    { name: '9th', intervals: [2], degrees: ['9'], notation: '9' },
-        '#9':   { name: 'Sharp 9th', intervals: [3], degrees: ['♯9'], notation: '(♯9)' },
-        '11':   { name: '11th', intervals: [5], degrees: ['11'], notation: '11' },
-        '#11':  { name: 'Sharp 11th', intervals: [6], degrees: ['♯11'], replaces: 5, notation: '(♯11)' },
-        'b13':  { name: 'Flat 13th', intervals: [8], degrees: ['♭13'], replaces: 5, notation: '(♭13)' },
-        '13th': { name: '13th', intervals: [9], degrees: ['13'], notation: '13' },
+        '7':    { name: 'Dominant 7th', intervals: [0, 4, 7, 10], degrees: ['R', '3', '5', '♭7'], notation: '7' },
+        'M7':   { name: 'Major 7th', intervals: [0, 4, 7, 11], degrees: ['R', '3', '5', '7'], notation: 'M7' },
+        'm7':   { name: 'Minor 7th', intervals: [0, 3, 7, 10], degrees: ['R', '♭3', '5', '♭7'], notation: 'm7' },
+        'm7b5': { name: 'Minor 7th flat 5', intervals: [0, 3, 6, 10], degrees: ['R', '♭3', '♭5', '♭7'], notation: 'm7(♭5)' },
+        'dim7': { name: 'Diminished 7th', intervals: [0, 3, 6, 9], degrees: ['R', '♭3', '♭5', '♭♭7'], notation: 'dim7' },
+        'add9': { name: 'Add 9', intervals: [0, 2, 4, 7], degrees: ['R', '2', '3', '5'], notation: 'add9' },
+        'madd9':{ name: 'Minor Add 9', intervals: [0, 2, 3, 7], degrees: ['R', '2', '♭3', '5'], notation: 'm(add9)' },
+        '7b9':  { name: '7th flat 9', intervals: [0, 1, 4, 7, 10], degrees: ['R', '♭9', '3', '5', '♭7'], notation: '7(♭9)'},
+        'm7(9)':{ name: 'Minor 7th (9)', intervals: [0, 2, 3, 7, 10], degrees: ['R', '9', '♭3', '5', '♭7'], notation: 'm7(9)' },
     };
     
     const SCALES = {
@@ -38,6 +38,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const ACTIVE_CLASS_MAP = {
         chordType: 'active-type',
         tensions: 'active-tension'
+    };
+    
+    const KEY_NOTE_DISPLAY_MODE = {
+        'F': 'flats', 'Bb': 'flats', 'Eb': 'flats', 'Ab': 'flats', 'Db': 'flats', 'Gb': 'flats', 'Cb': 'flats',
+        'A#': 'flats', 'D#': 'flats', 'G#': 'flats', 'C#': 'flats', 'F#': 'flats', 
+        'C': 'sharps', 'G': 'sharps', 'D': 'sharps', 'A': 'sharps', 'E': 'sharps', 'B': 'sharps',
     };
 
     // --- UI ELEMENT REFERENCES ---
@@ -63,6 +69,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const diatonicKeySelector = document.getElementById('diatonic-key-selector');
     const diatonicModeSelector = document.getElementById('diatonic-mode-selector');
     const diatonicChordsContainer = document.getElementById('diatonic-chords-container');
+    const reverseLookupToggle = document.getElementById('reverse-lookup-toggle');
+    const saveReverseChordButton = document.getElementById('save-reverse-chord-button');
+    const normalControls = document.getElementById('normal-controls');
+    const reverseLookupControls = document.getElementById('reverse-lookup-controls');
+    const presetsContainer = document.getElementById('presets-container');
+
 
     let fretboardGrid = [];
     let currentChordPreset = [];
@@ -73,6 +85,9 @@ document.addEventListener('DOMContentLoaded', () => {
         rootNote: null, chordType: null, tensions: [], bassNote: null,
         showMajorPenta: false, showMinorPenta: false, displayAsDegrees: false
     };
+    let isReverseLookupMode = false;
+    let selectedNotesForLookup = [];
+    let identifiedChordState = null;
 
     // --- INITIALIZATION ---
     function initialize() {
@@ -85,6 +100,8 @@ document.addEventListener('DOMContentLoaded', () => {
         renderProgressionSelector();
         updateControlsFromState();
         updateDisplay();
+        // Move presets container for UI switching
+        reverseLookupControls.appendChild(presetsContainer);
     }
     
     function initializeSortable() {
@@ -123,7 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 fretCell.appendChild(noteDisplay);
                 stringRow.appendChild(fretCell);
                 fretboardGrid[s][f] = { element: fretCell, noteDisplay: noteDisplay, noteIndex: noteIndex };
-                fretCell.addEventListener('click', () => handleFretClick(noteIndex));
+                fretCell.addEventListener('click', () => handleFretClick(f, s));
             }
             const stringLine = document.createElement('div');
             stringLine.className = 'string absolute top-1/2 -translate-y-1/2';
@@ -185,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const chordTypes = ['Maj', 'min', 'dim', 'aug', 'sus2', 'sus4'];
         createButtons(chordTypeSelector, chordTypes, 'chordType', 'single');
-        const tensions = ['7th', 'M7th', 'b9', '9', '#9', '11', '#11', 'b13', '13th'];
+        const tensions = ['7', 'M7', 'm7', 'm7b5', 'dim7', 'add9', 'madd9'];
         createButtons(tensionSelector, tensions, 'tensions', 'multiple');
     }
 
@@ -222,19 +239,50 @@ document.addEventListener('DOMContentLoaded', () => {
             updateDisplay();
         });
         saveChordButton.addEventListener('click', saveChordToPreset);
+        saveReverseChordButton.addEventListener('click', saveReverseChord);
         saveProgressionButton.addEventListener('click', saveProgression);
         progressionSelector.addEventListener('change', loadProgression);
         deleteProgressionButton.addEventListener('click', deleteProgression);
         clearProgressionButton.addEventListener('click', clearCurrentProgression);
         diatonicKeySelector.addEventListener('change', renderDiatonicChords);
         diatonicModeSelector.addEventListener('change', renderDiatonicChords);
+        reverseLookupToggle.addEventListener('click', toggleReverseLookupMode);
     }
     
-    function handleFretClick(noteIndex) {
-        const newRootNote = NOTES[noteIndex];
-        state.rootNote = state.rootNote === newRootNote ? null : newRootNote;
-        updateControlsFromState();
-        updateDisplay();
+    function handleFretClick(fret, string) {
+        const clickedCell = fretboardGrid[string][fret];
+        if (clickedCell.element.classList.contains('disabled')) return;
+
+        const noteIndex = clickedCell.noteIndex;
+
+        if (isReverseLookupMode) {
+            const noteId = `${string}-${fret}`;
+            const existingNote = selectedNotesForLookup.find(n => n.id === noteId);
+
+            if (fret === 0) {
+                if (!existingNote) {
+                    selectedNotesForLookup.push({ id: noteId, string, fret, noteIndex, status: 'selected' });
+                } else if (existingNote.status === 'selected') {
+                    existingNote.status = 'muted';
+                } else { // status is 'muted'
+                    selectedNotesForLookup = selectedNotesForLookup.filter(n => n.id !== noteId);
+                }
+            } else {
+                if (existingNote) {
+                    selectedNotesForLookup = selectedNotesForLookup.filter(n => n.id !== noteId);
+                } else {
+                    // Remove any other selections on the same string
+                    selectedNotesForLookup = selectedNotesForLookup.filter(n => n.string !== string);
+                    selectedNotesForLookup.push({ id: noteId, string, fret, noteIndex, status: 'selected' });
+                }
+            }
+            updateReverseLookupFretboard();
+        } else {
+            const newRootNote = NOTES[noteIndex];
+            state.rootNote = state.rootNote === newRootNote ? null : newRootNote;
+            updateControlsFromState();
+            updateDisplay();
+        }
     }
 
     function handleButtonClick(e) {
@@ -258,8 +306,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function resetAll() {
         state = { rootNote: null, chordType: null, tensions: [], bassNote: null, showMajorPenta: false, showMinorPenta: false, displayAsDegrees: false };
-        updateControlsFromState();
-        updateDisplay();
+        if (isReverseLookupMode) {
+            selectedNotesForLookup = [];
+            updateReverseLookupFretboard();
+            fullChordNameDisplay.textContent = "指板を選択";
+            fullChordNameDisplay.classList.remove('text-lg', 'text-red-500');
+            fullChordNameDisplay.classList.add('text-base', 'text-gray-500');
+        } else {
+            updateControlsFromState();
+            updateDisplay();
+        }
     }
     
     function saveChordToPreset() {
@@ -275,7 +331,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function recallChordState(id) {
         const saved = currentChordPreset.find(c => c.id === id);
-        if (saved) { state = JSON.parse(JSON.stringify(saved.state)); updateControlsFromState(); updateDisplay(); }
+        if (saved) { 
+            if (isReverseLookupMode) toggleReverseLookupMode();
+            state = JSON.parse(JSON.stringify(saved.state)); 
+            updateControlsFromState(); 
+            updateDisplay(); 
+        }
     }
     
     function deleteChordFromPreset(id) {
@@ -290,7 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             currentChordPreset.forEach(chord => {
                 const btn = document.createElement('div');
-                btn.className = 'saved-chord-btn bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded shadow transition-colors';
+                btn.className = 'saved-chord-btn bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-1 px-2.5 border border-gray-400 rounded shadow transition-colors text-xs';
                 btn.textContent = chord.name; btn.dataset.id = chord.id;
                 btn.addEventListener('click', () => recallChordState(chord.id));
                 const deleteBtn = document.createElement('button');
@@ -365,7 +426,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function updateControlsFromState() {
         fullChordNameDisplay.textContent = generateChordName(state);
-        
+        fullChordNameDisplay.classList.add('text-lg', 'text-red-500');
+        fullChordNameDisplay.classList.remove('text-base', 'text-gray-500');
+                
         document.querySelectorAll('.control-btn').forEach(btn => {
             const { key, value, type } = btn.dataset;
             const activeClass = ACTIVE_CLASS_MAP[key];
@@ -396,6 +459,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         clearAndResetBoard();
         
+        if (isReverseLookupMode) return;
+
         if (!isRootSelected) return;
 
         const rootNoteIndex = NOTES.indexOf(state.rootNote);
@@ -415,39 +480,39 @@ document.addEventListener('DOMContentLoaded', () => {
     function getDegreeName(noteIndex, rootIndex) { return DEGREE_NAMES[(noteIndex - rootIndex + 12) % 12]; }
     
     function clearAndResetBoard() {
-        const rootNoteIndex = state.rootNote ? NOTES.indexOf(state.rootNote) : -1;
+        let displayNotes = NOTES; // Default to sharps
+        if (!isReverseLookupMode && state.rootNote && KEY_NOTE_DISPLAY_MODE[state.rootNote] === 'flats') {
+            displayNotes = NOTES_FLAT;
+        }
+
         for (let s = 0; s < STRING_COUNT; s++) {
             for (let f = 0; f <= FRET_COUNT; f++) {
                 if (!fretboardGrid[s] || !fretboardGrid[s][f]) continue;
                 const cell = fretboardGrid[s][f];
+                cell.element.classList.remove('reverse-lookup-selected', 'reverse-lookup-muted', 'disabled');
                 const highlights = cell.element.querySelectorAll('.highlight-circle, .scale-highlight');
                 highlights.forEach(h => h.remove());
-                if (state.displayAsDegrees && rootNoteIndex !== -1) { cell.noteDisplay.innerHTML = getDegreeName(cell.noteIndex, rootNoteIndex); } 
-                else { cell.noteDisplay.innerHTML = NOTES[cell.noteIndex]; }
-                cell.noteDisplay.className = 'note-display';
+                cell.noteDisplay.innerHTML = displayNotes[cell.noteIndex];
             }
         }
     }
     
     function calculateChord(type, tensions) {
-        let chord = { intervals: [], degrees: [] };
+        let allIntervals = [];
+        let allDegrees = [];
+        
         const baseChord = type ? CHORD_INTERVALS[type] : { intervals: [0], degrees: ['R'] };
-        chord.intervals = [...(baseChord.intervals || [0])];
-        chord.degrees = [...(baseChord.degrees || ['R'])];
+        allIntervals.push(...(baseChord.intervals || [0]));
+        allDegrees.push(...(baseChord.degrees || ['R']));
         
         (tensions || []).forEach(tensionKey => {
             const tension = CHORD_INTERVALS[tensionKey];
             if (!tension || !tension.intervals) return;
-            let replaced = false;
-            if (tension.replaces) {
-                const degreeToReplace = tension.replaces === 3 ? '3' : '5';
-                const degreeIndex = chord.degrees.findIndex(d => d.includes(degreeToReplace));
-                if (degreeIndex !== -1) { chord.intervals[degreeIndex] = tension.intervals[0]; chord.degrees[degreeIndex] = tension.degrees[0]; replaced = true; }
-            }
-            if (!replaced) { chord.intervals.push(...tension.intervals); chord.degrees.push(...tension.degrees); }
+            const base = CHORD_INTERVALS[type] || CHORD_INTERVALS['Maj'];
+            allIntervals.push(...tension.intervals.filter(i => !base.intervals.includes(i)));
+            allDegrees.push(...tension.degrees.filter(d => !base.degrees.includes(d)));
         });
-        if (!type && (!tensions || tensions.length === 0)) return { intervals: [0], degrees: ['R'] };
-        return chord;
+        return { intervals: [...new Set(allIntervals)], degrees: [...new Set(allDegrees)] };
     }
 
     function calculateScaleNotes(rootIndex, scaleType) {
@@ -471,7 +536,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function highlightChord(noteMap, rootNoteIndex) {
-         const TENSION_DEGREE_NAMES = ['♭7', '7', '♭9', '9', '♯9', '11', '♯11', '♭13', '13', '6'];
+         const TENSION_DEGREE_NAMES = ['♭7', '7', '9', '11', '13'];
          const noteIndicesToHighlight = Object.keys(noteMap).map(n => parseInt(n));
          for (let s = 0; s < STRING_COUNT; s++) {
             for (let f = 0; f <= FRET_COUNT; f++) {
@@ -500,7 +565,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function highlightBassNote(bassNoteIndex) {
-        for (let s = 4; s <= 5; s++) {
+        for (let s = 0; s < STRING_COUNT; s++) {
             for (let f = 0; f <= FRET_COUNT; f++) {
                 if (!fretboardGrid[s] || !fretboardGrid[s][f]) continue;
                 const cell = fretboardGrid[s][f];
@@ -528,16 +593,29 @@ document.addEventListener('DOMContentLoaded', () => {
     function generateChordName(currentState) {
         if (!currentState.rootNote) return '--';
         let name = currentState.rootNote;
-        if (currentState.chordType) {
-            name += CHORD_INTERVALS[currentState.chordType]?.notation || '';
+        
+        let baseNotation = '';
+        if(currentState.chordType) {
+            baseNotation = CHORD_INTERVALS[currentState.chordType]?.notation || '';
         }
         
-        const tensionOrder = ['7th', 'M7th', 'b9', '9', '#9', '11', '#11', 'b13', '13th'];
+        const tensionOrder = ['7', 'M7', 'm7', 'm7b5', 'dim7', 'add9', 'madd9', 'm7(9)', '7b9'];
         const sortedTensions = (currentState.tensions || []).sort((a, b) => tensionOrder.indexOf(a) - tensionOrder.indexOf(b));
 
+        let tensionNotation = '';
         sortedTensions.forEach(t => {
-            name += CHORD_INTERVALS[t]?.notation || '';
+            const notation = CHORD_INTERVALS[t]?.notation;
+            if (notation && !baseNotation.includes(notation.replace(/m/g, ''))) {
+                 tensionNotation += notation;
+            }
         });
+        
+        if (baseNotation === 'm' && tensionNotation.startsWith('m')) {
+             name += tensionNotation;
+        } else {
+            name += baseNotation + tensionNotation;
+        }
+
 
         if (currentState.bassNote && currentState.bassNote !== currentState.rootNote) {
             name += `/${currentState.bassNote}`;
@@ -573,6 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.className = 'diatonic-chord-btn border border-gray-400 bg-gray-100 hover:bg-gray-200 rounded py-2 px-3 text-sm font-semibold text-gray-800';
             btn.textContent = `${rootNoteName}${CHORD_INTERVALS[chordType].notation}`;
             btn.addEventListener('click', () => {
+                if (isReverseLookupMode) toggleReverseLookupMode();
                 state.rootNote = rootNoteName;
                 state.chordType = chordType;
                 state.tensions = [];
@@ -582,6 +661,127 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             diatonicChordsContainer.appendChild(btn);
         });
+    }
+
+    // --- REVERSE LOOKUP FUNCTIONS ---
+    function toggleReverseLookupMode() {
+        isReverseLookupMode = !isReverseLookupMode;
+        reverseLookupToggle.classList.toggle('active-lookup', isReverseLookupMode);
+        
+        resetAll();
+        
+        normalControls.classList.toggle('hidden', isReverseLookupMode);
+        reverseLookupControls.classList.toggle('hidden', !isReverseLookupMode);
+        saveReverseChordButton.classList.toggle('hidden', !isReverseLookupMode);
+        saveChordButton.classList.toggle('hidden', isReverseLookupMode);
+
+        if (isReverseLookupMode) {
+            fullChordNameDisplay.textContent = "指板を選択";
+            fullChordNameDisplay.classList.remove('text-lg', 'text-red-500');
+            fullChordNameDisplay.classList.add('text-base', 'text-gray-500');
+        }
+    }
+
+    function updateReverseLookupFretboard() {
+        clearAndResetBoard();
+
+        for (let s = 0; s < STRING_COUNT; s++) {
+            const selectedNoteOnString = selectedNotesForLookup.find(n => n.string === s && n.status === 'selected');
+            if (selectedNoteOnString && selectedNoteOnString.fret > 0) {
+                for (let f = 0; f < selectedNoteOnString.fret; f++) {
+                    fretboardGrid[s][f].element.classList.add('disabled');
+                }
+            }
+        }
+
+        selectedNotesForLookup.forEach(note => {
+            const cell = fretboardGrid[note.string][note.fret];
+            if (note.status === 'selected') {
+                cell.element.classList.add('reverse-lookup-selected');
+            } else if (note.status === 'muted') {
+                cell.element.classList.add('reverse-lookup-muted');
+                cell.noteDisplay.textContent = 'X';
+            }
+        });
+
+        identifyChordFromSelection();
+    }
+
+    function identifyChordFromSelection() {
+        const uniqueNoteIndexes = [...new Set(selectedNotesForLookup.filter(n => n.status === 'selected').map(n => n.noteIndex))];
+        if (uniqueNoteIndexes.length < 2) {
+            fullChordNameDisplay.textContent = "音を追加";
+            fullChordNameDisplay.classList.remove('text-lg', 'text-red-500');
+            fullChordNameDisplay.classList.add('text-sm', 'text-gray-500');
+            identifiedChordState = null;
+            saveReverseChordButton.disabled = true;
+            return;
+        }
+
+        const result = findChord(uniqueNoteIndexes);
+        if (result) {
+            fullChordNameDisplay.textContent = result.name;
+            fullChordNameDisplay.classList.add('text-lg', 'text-red-500');
+            fullChordNameDisplay.classList.remove('text-sm', 'text-gray-500');
+            identifiedChordState = result.state;
+            saveReverseChordButton.disabled = false;
+        } else {
+            fullChordNameDisplay.textContent = "不明なコード";
+            fullChordNameDisplay.classList.remove('text-lg', 'text-red-500');
+            fullChordNameDisplay.classList.add('text-sm', 'text-gray-500');
+            identifiedChordState = null;
+            saveReverseChordButton.disabled = true;
+        }
+    }
+
+    function findChord(noteIndexes) {
+        const CHORD_DEFINITIONS = [
+            { name: 'm7(9)', state: { chordType: 'min', tensions: ['m7', 'add9'] }, intervals: [0, 2, 3, 7, 10] },
+            { name: '7(♭9)', state: { chordType: 'Maj', tensions: ['7', '7b9'] }, intervals: [0, 1, 4, 7, 10] },
+            { name: '7', state: { chordType: 'Maj', tensions: ['7'] }, intervals: [0, 4, 7, 10] }, 
+            { name: 'M7', state: { chordType: 'Maj', tensions: ['M7'] }, intervals: [0, 4, 7, 11] },
+            { name: 'm7', state: { chordType: 'min', tensions: ['m7'] }, intervals: [0, 3, 7, 10] }, 
+            { name: 'm7(♭5)', state: { chordType: 'dim', tensions: ['m7b5'] }, intervals: [0, 3, 6, 10] },
+            { name: 'dim7', state: { chordType: 'dim', tensions: ['dim7'] }, intervals: [0, 3, 6, 9] }, 
+            { name: 'add9', state: { chordType: 'Maj', tensions: ['add9'] }, intervals: [0, 2, 4, 7] },
+            { name: 'm(add9)', state: { chordType: 'min', tensions: ['madd9'] }, intervals: [0, 2, 3, 7] }, 
+            { name: '', state: { chordType: 'Maj', tensions: [] }, intervals: [0, 4, 7] }, 
+            { name: 'm', state: { chordType: 'min', tensions: [] }, intervals: [0, 3, 7] }, 
+            { name: 'dim', state: { chordType: 'dim', tensions: [] }, intervals: [0, 3, 6] }, 
+            { name: 'aug', state: { chordType: 'aug', tensions: [] }, intervals: [0, 4, 8] }, 
+            { name: 'sus2', state: { chordType: 'sus2', tensions: [] }, intervals: [0, 2, 7] }, 
+            { name: 'sus4', state: { chordType: 'sus4', tensions: [] }, intervals: [0, 5, 7] },
+        ];
+
+        for (const root of noteIndexes) {
+            const intervals = noteIndexes.map(note => (note - root + 12) % 12).sort((a, b) => a - b);
+            for (const chord of CHORD_DEFINITIONS) {
+                if (intervals.length === chord.intervals.length && intervals.every((v, i) => v === chord.intervals[i])) {
+                    return {
+                        name: `${NOTES[root]}${chord.name}`,
+                        state: {
+                            rootNote: NOTES[root],
+                            ...chord.state,
+                        }
+                    };
+                }
+            }
+        }
+        return null;
+    }
+
+    function saveReverseChord() {
+        if (identifiedChordState) {
+            const finalState = { ...state, ...identifiedChordState, bassNote: null };
+            const chordName = generateChordName(finalState);
+            const newSavedChord = {
+                id: Date.now().toString(),
+                name: chordName,
+                state: JSON.parse(JSON.stringify(finalState))
+            };
+            currentChordPreset.push(newSavedChord);
+            renderCurrentProgression();
+        }
     }
 
     // --- START THE APP ---
