@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- DATA DEFINITIONS ---
-    const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-    const NOTES_FLAT = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+    const NOTES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
+    const NOTES_FLAT = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'G♭', 'G', 'A♭', 'A', 'B♭', 'B'];
     const DEGREE_NAMES = ['R', '♭2', '2', '♭3', '3', '4', '♭5', '5', '♭6', '6', '♭7', '7'];
     let FRET_COUNT = 15;
     const STRING_COUNT = 6;
@@ -19,16 +19,18 @@ document.addEventListener('DOMContentLoaded', () => {
         'm7':   { name: 'Minor 7th', intervals: [0, 3, 7, 10], degrees: ['R', '♭3', '5', '♭7'], notation: 'm7' },
         'm7b5': { name: 'Minor 7th flat 5', intervals: [0, 3, 6, 10], degrees: ['R', '♭3', '♭5', '♭7'], notation: 'm7(♭5)' },
         'dim7': { name: 'Diminished 7th', intervals: [0, 3, 6, 9], degrees: ['R', '♭3', '♭5', '♭♭7'], notation: 'dim7' },
-        'add9': { name: 'Add 9', intervals: [0, 2, 4, 7], degrees: ['R', '2', '3', '5'], notation: 'add9' },
-        'madd9':{ name: 'Minor Add 9', intervals: [0, 2, 3, 7], degrees: ['R', '2', '♭3', '5'], notation: 'm(add9)' },
+        '6':    { name: 'Major 6th', intervals: [0, 4, 7, 9], degrees: ['R', '3', '5', '6'], notation: '6' },
+        'm6':   { name: 'Minor 6th', intervals: [0, 3, 7, 9], degrees: ['R', '♭3', '5', '6'], notation: 'm6' },
+        '9':    { name: 'Dominant 9th', intervals: [0, 2, 4, 7, 10], degrees: ['R', '9', '3', '5', '♭7'], notation: '9' },
+        'M9':   { name: 'Major 9th', intervals: [0, 2, 4, 7, 11], degrees: ['R', '9', '3', '5', '7'], notation: 'M9' },
+        'm9':   { name: 'Minor 9th', intervals: [0, 2, 3, 7, 10], degrees: ['R', '9', '♭3', '5', '♭7'], notation: 'm9' },
+        '7s9':  { name: '7th sharp 9', intervals: [0, 3, 4, 7, 10], degrees: ['R', '♯9', '3', '5', '♭7'], notation: '7(♯9)'},
         '7b9':  { name: '7th flat 9', intervals: [0, 1, 4, 7, 10], degrees: ['R', '♭9', '3', '5', '♭7'], notation: '7(♭9)'},
-        'm7(9)':{ name: 'Minor 7th (9)', intervals: [0, 2, 3, 7, 10], degrees: ['R', '9', '♭3', '5', '♭7'], notation: 'm7(9)' },
     };
     
     const SCALES = {
         majorPentatonic: { name: 'Major Pentatonic', intervals: [0, 2, 4, 7, 9] },
         minorPentatonic: { name: 'Minor Pentatonic', intervals: [0, 3, 5, 7, 10] },
-        blues: { name: 'Blues Scale', intervals: [0, 3, 5, 6, 7, 10] },
     };
 
     const DIATONIC_PATTERNS = {
@@ -41,12 +43,6 @@ document.addEventListener('DOMContentLoaded', () => {
         tensions: 'active-tension'
     };
     
-    const KEY_NOTE_DISPLAY_MODE = {
-        'F': 'flats', 'Bb': 'flats', 'Eb': 'flats', 'Ab': 'flats', 'Db': 'flats', 'Gb': 'flats', 'Cb': 'flats',
-        'A#': 'flats', 'D#': 'flats', 'G#': 'flats', 'C#': 'flats', 'F#': 'flats', 
-        'C': 'sharps', 'G': 'sharps', 'D': 'sharps', 'A': 'sharps', 'E': 'sharps', 'B': 'sharps',
-    };
-
     // --- UI ELEMENT REFERENCES ---
     const fretboardContainer = document.getElementById('fretboard-container');
     const fullChordNameDisplay = document.getElementById('full-chord-name-display');
@@ -55,11 +51,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const bassNoteSelector = document.getElementById('bass-note-selector');
     const majorPentaToggle = document.getElementById('major-penta-toggle');
     const minorPentaToggle = document.getElementById('minor-penta-toggle');
-    const bluesScaleToggle = document.getElementById('blues-scale-toggle');
     const resetButton = document.getElementById('reset-button');
     const fretCountInput = document.getElementById('fret-count-input');
     const degreeDisplayToggle = document.getElementById('degree-display-toggle');
     const degreeToggleLabel = document.getElementById('degree-toggle-label');
+    const notationToggle = document.getElementById('notation-toggle');
     const saveChordButton = document.getElementById('save-chord-button');
     const savedChordsContainer = document.getElementById('saved-chords-container');
     const presetsPlaceholder = document.getElementById('presets-placeholder');
@@ -75,7 +71,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveReverseChordButton = document.getElementById('save-reverse-chord-button');
     const normalControls = document.getElementById('normal-controls');
     const reverseLookupControls = document.getElementById('reverse-lookup-controls');
-    const presetsContainer = document.getElementById('presets-container');
 
 
     let fretboardGrid = [];
@@ -85,7 +80,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- STATE MANAGEMENT ---
     let state = {
         rootNote: null, chordType: null, tensions: [], bassNote: null,
-        showMajorPenta: false, showMinorPenta: false, showBlues: false, displayAsDegrees: false
+        showMajorPenta: false, showMinorPenta: false, displayAsDegrees: false,
+        notationMode: 'sharps' // 'sharps' or 'flats'
     };
     let isReverseLookupMode = false;
     let selectedNotesForLookup = [];
@@ -102,10 +98,14 @@ document.addEventListener('DOMContentLoaded', () => {
         renderProgressionSelector();
         updateControlsFromState();
         updateDisplay();
-        // Move presets container for UI switching
-        reverseLookupControls.appendChild(presetsContainer);
+        reverseLookupControls.appendChild(document.getElementById('current-progression-container'));
     }
     
+    function formatNoteHTML(name) {
+        if (!name) return '';
+        return name.replace(/([♯♭])/g, '<span class="accidental">$1</span>');
+    }
+
     function initializeSortable() {
         new Sortable(savedChordsContainer, {
             animation: 150,
@@ -193,18 +193,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function createControlButtons() {
-        const rootNotes = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'];
+        const rootNotes = state.notationMode === 'flats' ? NOTES_FLAT : NOTES;
         bassNoteSelector.innerHTML = '<option value="">なし</option>';
         rootNotes.forEach(note => {
             const option = document.createElement('option');
             option.value = note;
-            option.textContent = note;
+            option.textContent = note; // Leave as text for <option>
             bassNoteSelector.appendChild(option);
         });
 
         const chordTypes = ['Maj', 'min', 'dim', 'aug', 'sus2', 'sus4'];
         createButtons(chordTypeSelector, chordTypes, 'chordType', 'single');
-        const tensions = ['7', 'M7', 'm7', 'm7b5', 'dim7', 'add9', 'madd9'];
+        const tensions = ['6', 'm6', '7', 'M7', 'm7', '9', 'M9', 'm9', '7b9', '7s9', 'm7b5', 'dim7'];
         createButtons(tensionSelector, tensions, 'tensions', 'multiple');
     }
 
@@ -213,15 +213,17 @@ document.addEventListener('DOMContentLoaded', () => {
         items.forEach(item => {
             const button = document.createElement('button');
             button.className = 'control-btn border border-gray-300 rounded py-1 text-xs text-gray-700 hover:bg-gray-100';
-            button.textContent = item; button.dataset.value = item; button.dataset.key = stateKey; button.dataset.type = selectionType;
+            button.innerHTML = formatNoteHTML(item); // Use innerHTML
+            button.dataset.value = item; button.dataset.key = stateKey; button.dataset.type = selectionType;
             container.appendChild(button);
         });
     }
 
     function addEventListeners() {
         document.getElementById('controls-container').addEventListener('click', (e) => {
-            if (e.target.matches('.control-btn')) {
-                handleButtonClick(e);
+            const btn = e.target.closest('.control-btn');
+            if (btn) {
+                handleButtonClick(btn);
             }
         });
         bassNoteSelector.addEventListener('change', (e) => {
@@ -231,8 +233,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         majorPentaToggle.addEventListener('change', (e) => { state.showMajorPenta = e.target.checked; updateDisplay(); });
         minorPentaToggle.addEventListener('change', (e) => { state.showMinorPenta = e.target.checked; updateDisplay(); });
-        bluesScaleToggle.addEventListener('change', (e) => { state.showBlues = e.target.checked; updateDisplay(); });
         degreeDisplayToggle.addEventListener('change', (e) => { state.displayAsDegrees = e.target.checked; updateDisplay(); });
+        notationToggle.addEventListener('change', (e) => {
+            state.notationMode = e.target.checked ? 'flats' : 'sharps';
+            createControlButtons(); // Re-create buttons with correct notation
+            updateDisplay();
+        });
         resetButton.addEventListener('click', resetAll);
         fretCountInput.addEventListener('change', (e) => {
             const newCount = parseInt(e.target.value, 10);
@@ -274,22 +280,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (existingNote) {
                     selectedNotesForLookup = selectedNotesForLookup.filter(n => n.id !== noteId);
                 } else {
-                    // Remove any other selections on the same string
                     selectedNotesForLookup = selectedNotesForLookup.filter(n => n.string !== string);
                     selectedNotesForLookup.push({ id: noteId, string, fret, noteIndex, status: 'selected' });
                 }
             }
             updateReverseLookupFretboard();
         } else {
-            const newRootNote = NOTES[noteIndex];
+            const displayNotes = state.notationMode === 'flats' ? NOTES_FLAT : NOTES;
+            const newRootNote = displayNotes[noteIndex];
             state.rootNote = state.rootNote === newRootNote ? null : newRootNote;
             updateControlsFromState();
             updateDisplay();
         }
     }
 
-    function handleButtonClick(e) {
-        const { key, value, type } = e.target.dataset;
+    function handleButtonClick(button) { // Parameter changed to button element
+        const { key, value, type } = button.dataset;
         if (!key) return;
 
         if (type === 'single') {
@@ -308,11 +314,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function resetAll() {
-        state = { rootNote: null, chordType: null, tensions: [], bassNote: null, showMajorPenta: false, showMinorPenta: false, showBlues: false, displayAsDegrees: false };
+        state = { rootNote: null, chordType: null, tensions: [], bassNote: null, showMajorPenta: false, showMinorPenta: false, displayAsDegrees: false, notationMode: 'sharps' };
         if (isReverseLookupMode) {
             selectedNotesForLookup = [];
             updateReverseLookupFretboard();
-            fullChordNameDisplay.textContent = "指板を選択";
+            fullChordNameDisplay.innerHTML = "指板を選択"; // Use innerHTML
             fullChordNameDisplay.classList.remove('text-lg', 'text-red-500');
             fullChordNameDisplay.classList.add('text-base', 'text-gray-500');
         } else {
@@ -322,7 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function saveChordToPreset() {
-        const chordName = generateChordName(state);
+        const chordName = generateChordName(state, false); // Get raw name for state
         if (!state.rootNote || chordName === '--') { 
             alert('コードをプリセットに追加するには、まずフレットボードをクリックしてルートノートを選択してください。'); 
             return; 
@@ -355,11 +361,12 @@ document.addEventListener('DOMContentLoaded', () => {
             currentChordPreset.forEach(chord => {
                 const btn = document.createElement('div');
                 btn.className = 'saved-chord-btn bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-1 px-2.5 border border-gray-400 rounded shadow transition-colors text-xs';
-                btn.textContent = chord.name; btn.dataset.id = chord.id;
+                btn.innerHTML = formatNoteHTML(chord.name); // Use innerHTML
+                btn.dataset.id = chord.id;
                 btn.addEventListener('click', () => recallChordState(chord.id));
                 const deleteBtn = document.createElement('button');
                 deleteBtn.className = 'delete-chord-btn'; deleteBtn.innerHTML = '&times;';
-                deleteBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteChordFromPreset(id); });
+                deleteBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteChordFromPreset(chord.id); });
                 btn.appendChild(deleteBtn);
                 savedChordsContainer.appendChild(btn);
             });
@@ -428,7 +435,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function updateControlsFromState() {
-        fullChordNameDisplay.textContent = generateChordName(state);
+        fullChordNameDisplay.innerHTML = generateChordName(state, true); // Use innerHTML
         fullChordNameDisplay.classList.add('text-lg', 'text-red-500');
         fullChordNameDisplay.classList.remove('text-base', 'text-gray-500');
                 
@@ -449,8 +456,8 @@ document.addEventListener('DOMContentLoaded', () => {
         bassNoteSelector.value = state.bassNote || '';
         majorPentaToggle.checked = state.showMajorPenta;
         minorPentaToggle.checked = state.showMinorPenta;
-        bluesScaleToggle.checked = state.showBlues;
         degreeDisplayToggle.checked = state.displayAsDegrees;
+        notationToggle.checked = state.notationMode === 'flats';
     }
 
     function updateDisplay() {
@@ -464,93 +471,97 @@ document.addEventListener('DOMContentLoaded', () => {
         clearAndResetBoard();
         
         if (isReverseLookupMode) return;
-
         if (!isRootSelected) return;
 
-        const rootNoteIndex = NOTES.indexOf(state.rootNote) !== -1 ? NOTES.indexOf(state.rootNote) : NOTES_FLAT.indexOf(state.rootNote);
-        if (rootNoteIndex === -1) return;
+        const currentNotes = state.notationMode === 'flats' ? NOTES_FLAT : NOTES;
+        let rootNoteIndex = currentNotes.indexOf(state.rootNote);
+        if (rootNoteIndex === -1) {
+            const fallbackNotes = state.notationMode === 'flats' ? NOTES : NOTES_FLAT;
+            const fallbackIndex = fallbackNotes.indexOf(state.rootNote);
+            if(fallbackIndex !== -1) {
+                rootNoteIndex = fallbackIndex;
+            } else {
+                return;
+            }
+        }
+
         if (state.showMajorPenta) highlightScale(calculateScaleNotes(rootNoteIndex, 'majorPentatonic'), 'major-penta');
         if (state.showMinorPenta) highlightScale(calculateScaleNotes(rootNoteIndex, 'minorPentatonic'), 'minor-penta');
-        if (state.showBlues) highlightScale(calculateScaleNotes(rootNoteIndex, 'blues'), 'blues-scale');
         const chordData = calculateChord(state.chordType, state.tensions);
         const chordNoteMap = {};
-        chordData.intervals.forEach((interval) => { 
-            const noteIndex = (rootNoteIndex + interval) % 12;
-            chordNoteMap[noteIndex] = getDegreeName(noteIndex, rootNoteIndex);
-        });
+        chordData.intervals.forEach((interval, i) => { const noteIndex = (rootNoteIndex + interval) % 12; chordNoteMap[noteIndex] = chordData.degrees[i]; });
         highlightChord(chordNoteMap, rootNoteIndex);
         if (state.bassNote) {
-            const bassNoteIndex = NOTES.indexOf(state.bassNote) !== -1 ? NOTES.indexOf(state.bassNote) : NOTES_FLAT.indexOf(state.bassNote);
+            let bassNoteIndex = currentNotes.indexOf(state.bassNote);
+            if (bassNoteIndex === -1) {
+                const fallbackNotes = state.notationMode === 'flats' ? NOTES : NOTES_FLAT;
+                bassNoteIndex = fallbackNotes.indexOf(state.bassNote);
+            }
             if (bassNoteIndex !== -1) highlightBassNote(bassNoteIndex);
         }
     }
 
-    function getDegreeName(noteIndex, rootIndex) { 
-        if (rootIndex === -1) return NOTES[noteIndex];
-        return DEGREE_NAMES[(noteIndex - rootIndex + 12) % 12];
-    }
+    function getDegreeName(noteIndex, rootIndex) { return DEGREE_NAMES[(noteIndex - rootIndex + 12) % 12]; }
     
+    /**
+     * [MODIFIED]
+     * Clears all highlights and text from the fretboard.
+     * If degree display mode is active, it shows only the degree on all frets.
+     * Otherwise, it shows only the note name.
+     */
     function clearAndResetBoard() {
-        let displayNotes = NOTES; // Default to sharps
-        if (!isReverseLookupMode && state.rootNote && KEY_NOTE_DISPLAY_MODE[state.rootNote] === 'flats') {
-            displayNotes = NOTES_FLAT;
+        const displayNotes = state.notationMode === 'flats' ? NOTES_FLAT : NOTES;
+        let rootNoteIndex = -1;
+        // Get the index of the root note if selected
+        if (state.rootNote) {
+            rootNoteIndex = displayNotes.indexOf(state.rootNote);
+            if (rootNoteIndex === -1) {
+                // Fallback for when notation (sharps/flats) has just been toggled
+                const otherNotes = state.notationMode === 'flats' ? NOTES : NOTES_FLAT;
+                rootNoteIndex = otherNotes.indexOf(state.rootNote);
+            }
         }
-
-        const rootNoteIndex = state.rootNote ? (NOTES.indexOf(state.rootNote) !== -1 ? NOTES.indexOf(state.rootNote) : NOTES_FLAT.indexOf(state.rootNote)) : -1;
-
+    
         for (let s = 0; s < STRING_COUNT; s++) {
             for (let f = 0; f <= FRET_COUNT; f++) {
                 if (!fretboardGrid[s] || !fretboardGrid[s][f]) continue;
                 const cell = fretboardGrid[s][f];
+                // Clean up classes and remove old highlights
                 cell.element.classList.remove('reverse-lookup-selected', 'reverse-lookup-muted', 'disabled');
                 const highlights = cell.element.querySelectorAll('.highlight-circle, .scale-highlight');
                 highlights.forEach(h => h.remove());
-                if (state.displayAsDegrees && rootNoteIndex !== -1) { 
-                    cell.noteDisplay.innerHTML = getDegreeName(cell.noteIndex, rootNoteIndex);
+    
+                // If "Display as Degrees" is on and a root note is selected
+                if (state.displayAsDegrees && rootNoteIndex !== -1) {
+                    const degreeName = getDegreeName(cell.noteIndex, rootNoteIndex);
+                    // Display only the degree
+                    cell.noteDisplay.innerHTML = formatNoteHTML(degreeName);
                 } else {
-                    cell.noteDisplay.innerHTML = displayNotes[cell.noteIndex];
+                    // Otherwise, display the note name
+                    const noteName = displayNotes[cell.noteIndex];
+                    cell.noteDisplay.innerHTML = formatNoteHTML(noteName);
                 }
             }
         }
     }
     
     function calculateChord(type, tensions) {
-        let intervals = new Set();
-        
-        // Start with base chord
-        if (type) {
-            CHORD_INTERVALS[type].intervals.forEach(i => intervals.add(i));
-        } else {
-            intervals.add(0);
-        }
-
-        // Add tensions
+        let allIntervals = [];
+        let allDegrees = [];
+        const baseChord = type ? CHORD_INTERVALS[type] : { intervals: [0], degrees: ['R'] };
+        allIntervals.push(...(baseChord.intervals || [0]));
+        allDegrees.push(...(baseChord.degrees || ['R']));
         (tensions || []).forEach(tensionKey => {
             const tension = CHORD_INTERVALS[tensionKey];
-            if (tension) {
-                tension.intervals.forEach(i => intervals.add(i));
-            }
+            if (!tension || !tension.intervals) return;
+            tension.intervals.forEach(interval => {
+                if (!allIntervals.includes(interval)) allIntervals.push(interval);
+            });
+            tension.degrees.forEach(degree => {
+                if (!allDegrees.includes(degree)) allDegrees.push(degree);
+            });
         });
-
-        // Resolve 3rd conflict: type wins
-        if (type && (type.includes('min') || type.includes('dim'))) {
-            if (intervals.has(4)) intervals.delete(4);
-        } else if (type && (type.includes('Maj') || type.includes('aug'))) {
-            if (intervals.has(3)) intervals.delete(3);
-        }
-        
-        // sus chords always remove any 3rd
-        if (type && type.includes('sus')) {
-             intervals.delete(3);
-             intervals.delete(4);
-        }
-
-        const finalIntervals = Array.from(intervals).sort((a, b) => a - b);
-        
-        const rootNoteIndex = state.rootNote ? (NOTES.indexOf(state.rootNote) !== -1 ? NOTES.indexOf(state.rootNote) : NOTES_FLAT.indexOf(state.rootNote)) : -1;
-        const finalDegrees = finalIntervals.map(i => DEGREE_NAMES[(i - rootNoteIndex + 12) % 12]);
-        
-        return { intervals: finalIntervals, degrees: finalDegrees };
+        return { intervals: [...new Set(allIntervals)], degrees: [...new Set(allDegrees)] };
     }
 
     function calculateScaleNotes(rootIndex, scaleType) {
@@ -574,28 +585,40 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function highlightChord(noteMap, rootNoteIndex) {
-         const TENSION_DEGREE_NAMES = ['♭7', '7', '9', '11', '13', '♭9'];
+         const TENSION_DEGREE_NAMES = ['♭7', '7', '9', '♯9', '11', '13', '6'];
          const noteIndicesToHighlight = Object.keys(noteMap).map(n => parseInt(n));
+         const displayNotes = state.notationMode === 'flats' ? NOTES_FLAT : NOTES;
+    
          for (let s = 0; s < STRING_COUNT; s++) {
             for (let f = 0; f <= FRET_COUNT; f++) {
                 if (!fretboardGrid[s] || !fretboardGrid[s][f]) continue;
                 const cell = fretboardGrid[s][f];
                 if (noteIndicesToHighlight.includes(cell.noteIndex)) {
-                     cell.noteDisplay.innerHTML = ''; 
+                     cell.noteDisplay.innerHTML = '';
                      const highlight = document.createElement('div');
                      highlight.className = 'highlight-circle';
+                     
+                     let displayText = '';
+                     if (state.displayAsDegrees) {
+                        displayText = noteMap[cell.noteIndex];
+                     } else {
+                        displayText = displayNotes[cell.noteIndex];
+                     }
+    
                      const degreeText = noteMap[cell.noteIndex];
-
+    
                      if (cell.noteIndex === rootNoteIndex) {
                         highlight.classList.add('root');
-                        highlight.textContent = 'R'; 
+                        if (state.displayAsDegrees) {
+                            displayText = 'R';
+                        }
                      } else if (TENSION_DEGREE_NAMES.some(t => degreeText.includes(t))) {
                         highlight.classList.add('tension');
-                        highlight.textContent = degreeText;
-                     } else { 
+                     } else {
                         highlight.classList.add('degree');
-                        highlight.textContent = degreeText;
                      }
+    
+                     highlight.innerHTML = formatNoteHTML(displayText);
                      cell.noteDisplay.appendChild(highlight);
                 }
             }
@@ -628,7 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    function generateChordName(currentState) {
+    function generateChordName(currentState, useHTML) { // Added useHTML flag
         if (!currentState.rootNote) return '--';
         let name = currentState.rootNote;
         
@@ -637,7 +660,7 @@ document.addEventListener('DOMContentLoaded', () => {
             baseNotation = CHORD_INTERVALS[currentState.chordType]?.notation || '';
         }
         
-        const tensionOrder = ['7', 'M7', 'm7', 'm7b5', 'dim7', 'add9', 'madd9', 'm7(9)', '7b9'];
+        const tensionOrder = ['6', 'm6', '7', 'M7', 'm7', '9', 'M9', 'm9', '7b9', '7s9', 'm7b5', 'dim7'];
         const sortedTensions = (currentState.tensions || []).sort((a, b) => tensionOrder.indexOf(a) - tensionOrder.indexOf(b));
 
         let tensionNotation = '';
@@ -654,16 +677,18 @@ document.addEventListener('DOMContentLoaded', () => {
             name += baseNotation + tensionNotation;
         }
 
-
         if (currentState.bassNote && currentState.bassNote !== currentState.rootNote) {
             name += `/${currentState.bassNote}`;
         }
-        return name;
+        
+        return useHTML ? formatNoteHTML(name) : name; // Return formatted or raw string
     }
     
     // --- DIATONIC FUNCTIONS ---
     function setupDiatonicPanel() {
-        NOTES.forEach(note => {
+        const notes = state.notationMode === 'flats' ? NOTES_FLAT : NOTES;
+        diatonicKeySelector.innerHTML = '';
+        notes.forEach(note => {
             const option = document.createElement('option');
             option.value = note;
             option.textContent = note;
@@ -676,18 +701,22 @@ document.addEventListener('DOMContentLoaded', () => {
         diatonicChordsContainer.innerHTML = '';
         const key = diatonicKeySelector.value;
         const mode = diatonicModeSelector.value;
-        const keyIndex = NOTES.indexOf(key);
+        
+        const currentNotes = state.notationMode === 'flats' ? NOTES_FLAT : NOTES;
+        const keyIndex = currentNotes.indexOf(key);
         if (keyIndex === -1) return;
 
         const pattern = DIATONIC_PATTERNS[mode];
+        const displayNotes = currentNotes;
+
         pattern.intervals.forEach((interval, i) => {
             const rootNoteIndex = (keyIndex + interval) % 12;
-            const rootNoteName = NOTES[rootNoteIndex];
+            const rootNoteName = displayNotes[rootNoteIndex];
             const chordType = pattern.types[i];
             
             const btn = document.createElement('button');
             btn.className = 'diatonic-chord-btn border border-gray-400 bg-gray-100 hover:bg-gray-200 rounded py-2 px-3 text-sm font-semibold text-gray-800';
-            btn.textContent = `${rootNoteName}${CHORD_INTERVALS[chordType].notation}`;
+            btn.innerHTML = formatNoteHTML(`${rootNoteName}${CHORD_INTERVALS[chordType].notation}`); // Use innerHTML
             btn.addEventListener('click', () => {
                 if (isReverseLookupMode) toggleReverseLookupMode();
                 state.rootNote = rootNoteName;
@@ -714,7 +743,7 @@ document.addEventListener('DOMContentLoaded', () => {
         saveChordButton.classList.toggle('hidden', isReverseLookupMode);
 
         if (isReverseLookupMode) {
-            fullChordNameDisplay.textContent = "指板を選択";
+            fullChordNameDisplay.innerHTML = "指板を選択"; // Use innerHTML
             fullChordNameDisplay.classList.remove('text-lg', 'text-red-500');
             fullChordNameDisplay.classList.add('text-base', 'text-gray-500');
         }
@@ -722,7 +751,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateReverseLookupFretboard() {
         clearAndResetBoard();
-
         for (let s = 0; s < STRING_COUNT; s++) {
             const selectedNoteOnString = selectedNotesForLookup.find(n => n.string === s && n.status === 'selected');
             if (selectedNoteOnString && selectedNoteOnString.fret > 0) {
@@ -731,7 +759,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }
-
         selectedNotesForLookup.forEach(note => {
             const cell = fretboardGrid[note.string][note.fret];
             if (note.status === 'selected') {
@@ -741,14 +768,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 cell.noteDisplay.textContent = 'X';
             }
         });
-
         identifyChordFromSelection();
     }
 
     function identifyChordFromSelection() {
         const uniqueNoteIndexes = [...new Set(selectedNotesForLookup.filter(n => n.status === 'selected').map(n => n.noteIndex))];
         if (uniqueNoteIndexes.length < 2) {
-            fullChordNameDisplay.textContent = "音を追加";
+            fullChordNameDisplay.innerHTML = "音を追加"; // Use innerHTML
             fullChordNameDisplay.classList.remove('text-lg', 'text-red-500');
             fullChordNameDisplay.classList.add('text-sm', 'text-gray-500');
             identifiedChordState = null;
@@ -758,13 +784,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const result = findChord(uniqueNoteIndexes);
         if (result) {
-            fullChordNameDisplay.textContent = result.name;
+            fullChordNameDisplay.innerHTML = formatNoteHTML(result.name); // Use innerHTML
             fullChordNameDisplay.classList.add('text-lg', 'text-red-500');
             fullChordNameDisplay.classList.remove('text-sm', 'text-gray-500');
             identifiedChordState = result.state;
             saveReverseChordButton.disabled = false;
         } else {
-            fullChordNameDisplay.textContent = "不明なコード";
+            fullChordNameDisplay.innerHTML = "不明なコード"; // Use innerHTML
             fullChordNameDisplay.classList.remove('text-lg', 'text-red-500');
             fullChordNameDisplay.classList.add('text-sm', 'text-gray-500');
             identifiedChordState = null;
@@ -774,15 +800,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function findChord(noteIndexes) {
         const CHORD_DEFINITIONS = [
-            { name: 'm7(9)', state: { chordType: 'min', tensions: ['m7', 'add9'] }, intervals: [0, 2, 3, 7, 10] },
-            { name: '7(♭9)', state: { chordType: 'Maj', tensions: ['7', '7b9'] }, intervals: [0, 1, 4, 7, 10] },
-            { name: '7', state: { chordType: 'Maj', tensions: ['7'] }, intervals: [0, 4, 7, 10] }, 
+            { name: 'M9', state: { chordType: 'Maj', tensions: ['M9'] }, intervals: [0, 2, 4, 7, 11] },
+            { name: '9', state: { chordType: 'Maj', tensions: ['9'] }, intervals: [0, 2, 4, 7, 10] },
+            { name: 'm9', state: { chordType: 'min', tensions: ['m9'] }, intervals: [0, 2, 3, 7, 10] },
+            { name: '7(♯9)', state: { chordType: 'Maj', tensions: ['7s9'] }, intervals: [0, 3, 4, 7, 10] },
+            { name: '7(♭9)', state: { chordType: 'Maj', tensions: ['7b9'] }, intervals: [0, 1, 4, 7, 10] },
             { name: 'M7', state: { chordType: 'Maj', tensions: ['M7'] }, intervals: [0, 4, 7, 11] },
+            { name: '7', state: { chordType: 'Maj', tensions: ['7'] }, intervals: [0, 4, 7, 10] },
+            { name: '6', state: { chordType: 'Maj', tensions: ['6'] }, intervals: [0, 4, 7, 9] },
             { name: 'm7', state: { chordType: 'min', tensions: ['m7'] }, intervals: [0, 3, 7, 10] }, 
+            { name: 'm6', state: { chordType: 'min', tensions: ['m6'] }, intervals: [0, 3, 7, 9] },
             { name: 'm7(♭5)', state: { chordType: 'dim', tensions: ['m7b5'] }, intervals: [0, 3, 6, 10] },
             { name: 'dim7', state: { chordType: 'dim', tensions: ['dim7'] }, intervals: [0, 3, 6, 9] }, 
-            { name: 'add9', state: { chordType: 'Maj', tensions: ['add9'] }, intervals: [0, 2, 4, 7] },
-            { name: 'm(add9)', state: { chordType: 'min', tensions: ['madd9'] }, intervals: [0, 2, 3, 7] }, 
             { name: '', state: { chordType: 'Maj', tensions: [] }, intervals: [0, 4, 7] }, 
             { name: 'm', state: { chordType: 'min', tensions: [] }, intervals: [0, 3, 7] }, 
             { name: 'dim', state: { chordType: 'dim', tensions: [] }, intervals: [0, 3, 6] }, 
@@ -790,16 +819,19 @@ document.addEventListener('DOMContentLoaded', () => {
             { name: 'sus2', state: { chordType: 'sus2', tensions: [] }, intervals: [0, 2, 7] }, 
             { name: 'sus4', state: { chordType: 'sus4', tensions: [] }, intervals: [0, 5, 7] },
         ];
+        
+        const displayNotes = state.notationMode === 'flats' ? NOTES_FLAT : NOTES;
 
         for (const root of noteIndexes) {
             const intervals = noteIndexes.map(note => (note - root + 12) % 12).sort((a, b) => a - b);
             for (const chord of CHORD_DEFINITIONS) {
                 if (intervals.length === chord.intervals.length && intervals.every((v, i) => v === chord.intervals[i])) {
+                    const rootNoteName = displayNotes[root];
+                    let chordNotation = chord.name;
                     return {
-                        name: `${NOTES[root]}${chord.name}`,
+                        name: `${rootNoteName}${chordNotation}`,
                         state: {
-                            rootNote: NOTES[root],
-                            ...chord.state,
+                            rootNote: rootNoteName, ...chord.state, notationMode: state.notationMode
                         }
                     };
                 }
@@ -811,7 +843,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function saveReverseChord() {
         if (identifiedChordState) {
             const finalState = { ...state, ...identifiedChordState, bassNote: null };
-            const chordName = generateChordName(finalState);
+            const chordName = generateChordName(finalState, false); // Raw name
             const newSavedChord = {
                 id: Date.now().toString(),
                 name: chordName,

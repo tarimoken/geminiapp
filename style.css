@@ -60,7 +60,6 @@ body {
 }
 .major-penta { background-color: #8b5cf6; }
 .minor-penta { background-color: #f97316; }
-.blues-scale { background-color: #0ea5e9; } /* Blues Scale Color */
 
 .control-btn, .diatonic-chord-btn {
     transition: all 0.2s ease-in-out;
