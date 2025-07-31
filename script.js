@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const SCALES = {
         majorPentatonic: { name: 'Major Pentatonic', intervals: [0, 2, 4, 7, 9] },
         minorPentatonic: { name: 'Minor Pentatonic', intervals: [0, 3, 5, 7, 10] },
+        blues: { name: 'Blues Scale', intervals: [0, 3, 5, 6, 7, 10] },
     };
 
     const DIATONIC_PATTERNS = {
@@ -54,6 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const bassNoteSelector = document.getElementById('bass-note-selector');
     const majorPentaToggle = document.getElementById('major-penta-toggle');
     const minorPentaToggle = document.getElementById('minor-penta-toggle');
+    const bluesScaleToggle = document.getElementById('blues-scale-toggle');
     const resetButton = document.getElementById('reset-button');
     const fretCountInput = document.getElementById('fret-count-input');
     const degreeDisplayToggle = document.getElementById('degree-display-toggle');
@@ -83,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- STATE MANAGEMENT ---
     let state = {
         rootNote: null, chordType: null, tensions: [], bassNote: null,
-        showMajorPenta: false, showMinorPenta: false, displayAsDegrees: false
+        showMajorPenta: false, showMinorPenta: false, showBlues: false, displayAsDegrees: false
     };
     let isReverseLookupMode = false;
     let selectedNotesForLookup = [];
@@ -229,6 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         majorPentaToggle.addEventListener('change', (e) => { state.showMajorPenta = e.target.checked; updateDisplay(); });
         minorPentaToggle.addEventListener('change', (e) => { state.showMinorPenta = e.target.checked; updateDisplay(); });
+        bluesScaleToggle.addEventListener('change', (e) => { state.showBlues = e.target.checked; updateDisplay(); });
         degreeDisplayToggle.addEventListener('change', (e) => { state.displayAsDegrees = e.target.checked; updateDisplay(); });
         resetButton.addEventListener('click', resetAll);
         fretCountInput.addEventListener('change', (e) => {
@@ -305,7 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function resetAll() {
-        state = { rootNote: null, chordType: null, tensions: [], bassNote: null, showMajorPenta: false, showMinorPenta: false, displayAsDegrees: false };
+        state = { rootNote: null, chordType: null, tensions: [], bassNote: null, showMajorPenta: false, showMinorPenta: false, showBlues: false, displayAsDegrees: false };
         if (isReverseLookupMode) {
             selectedNotesForLookup = [];
             updateReverseLookupFretboard();
@@ -446,6 +449,7 @@ document.addEventListener('DOMContentLoaded', () => {
         bassNoteSelector.value = state.bassNote || '';
         majorPentaToggle.checked = state.showMajorPenta;
         minorPentaToggle.checked = state.showMinorPenta;
+        bluesScaleToggle.checked = state.showBlues;
         degreeDisplayToggle.checked = state.displayAsDegrees;
     }
 
@@ -463,27 +467,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!isRootSelected) return;
 
-        const rootNoteIndex = NOTES.indexOf(state.rootNote);
+        const rootNoteIndex = NOTES.indexOf(state.rootNote) !== -1 ? NOTES.indexOf(state.rootNote) : NOTES_FLAT.indexOf(state.rootNote);
         if (rootNoteIndex === -1) return;
         if (state.showMajorPenta) highlightScale(calculateScaleNotes(rootNoteIndex, 'majorPentatonic'), 'major-penta');
         if (state.showMinorPenta) highlightScale(calculateScaleNotes(rootNoteIndex, 'minorPentatonic'), 'minor-penta');
+        if (state.showBlues) highlightScale(calculateScaleNotes(rootNoteIndex, 'blues'), 'blues-scale');
         const chordData = calculateChord(state.chordType, state.tensions);
         const chordNoteMap = {};
-        chordData.intervals.forEach((interval, i) => { const noteIndex = (rootNoteIndex + interval) % 12; chordNoteMap[noteIndex] = chordData.degrees[i]; });
+        chordData.intervals.forEach((interval) => { 
+            const noteIndex = (rootNoteIndex + interval) % 12;
+            chordNoteMap[noteIndex] = getDegreeName(noteIndex, rootNoteIndex);
+        });
         highlightChord(chordNoteMap, rootNoteIndex);
         if (state.bassNote) {
-            const bassNoteIndex = NOTES.indexOf(state.bassNote);
+            const bassNoteIndex = NOTES.indexOf(state.bassNote) !== -1 ? NOTES.indexOf(state.bassNote) : NOTES_FLAT.indexOf(state.bassNote);
             if (bassNoteIndex !== -1) highlightBassNote(bassNoteIndex);
         }
     }
 
-    function getDegreeName(noteIndex, rootIndex) { return DEGREE_NAMES[(noteIndex - rootIndex + 12) % 12]; }
+    function getDegreeName(noteIndex, rootIndex) { 
+        if (rootIndex === -1) return NOTES[noteIndex];
+        return DEGREE_NAMES[(noteIndex - rootIndex + 12) % 12];
+    }
     
     function clearAndResetBoard() {
         let displayNotes = NOTES; // Default to sharps
         if (!isReverseLookupMode && state.rootNote && KEY_NOTE_DISPLAY_MODE[state.rootNote] === 'flats') {
             displayNotes = NOTES_FLAT;
         }
+
+        const rootNoteIndex = state.rootNote ? (NOTES.indexOf(state.rootNote) !== -1 ? NOTES.indexOf(state.rootNote) : NOTES_FLAT.indexOf(state.rootNote)) : -1;
 
         for (let s = 0; s < STRING_COUNT; s++) {
             for (let f = 0; f <= FRET_COUNT; f++) {
@@ -492,27 +505,52 @@ document.addEventListener('DOMContentLoaded', () => {
                 cell.element.classList.remove('reverse-lookup-selected', 'reverse-lookup-muted', 'disabled');
                 const highlights = cell.element.querySelectorAll('.highlight-circle, .scale-highlight');
                 highlights.forEach(h => h.remove());
-                cell.noteDisplay.innerHTML = displayNotes[cell.noteIndex];
+                if (state.displayAsDegrees && rootNoteIndex !== -1) { 
+                    cell.noteDisplay.innerHTML = getDegreeName(cell.noteIndex, rootNoteIndex);
+                } else {
+                    cell.noteDisplay.innerHTML = displayNotes[cell.noteIndex];
+                }
             }
         }
     }
     
     function calculateChord(type, tensions) {
-        let allIntervals = [];
-        let allDegrees = [];
+        let intervals = new Set();
         
-        const baseChord = type ? CHORD_INTERVALS[type] : { intervals: [0], degrees: ['R'] };
-        allIntervals.push(...(baseChord.intervals || [0]));
-        allDegrees.push(...(baseChord.degrees || ['R']));
-        
+        // Start with base chord
+        if (type) {
+            CHORD_INTERVALS[type].intervals.forEach(i => intervals.add(i));
+        } else {
+            intervals.add(0);
+        }
+
+        // Add tensions
         (tensions || []).forEach(tensionKey => {
             const tension = CHORD_INTERVALS[tensionKey];
-            if (!tension || !tension.intervals) return;
-            const base = CHORD_INTERVALS[type] || CHORD_INTERVALS['Maj'];
-            allIntervals.push(...tension.intervals.filter(i => !base.intervals.includes(i)));
-            allDegrees.push(...tension.degrees.filter(d => !base.degrees.includes(d)));
+            if (tension) {
+                tension.intervals.forEach(i => intervals.add(i));
+            }
         });
-        return { intervals: [...new Set(allIntervals)], degrees: [...new Set(allDegrees)] };
+
+        // Resolve 3rd conflict: type wins
+        if (type && (type.includes('min') || type.includes('dim'))) {
+            if (intervals.has(4)) intervals.delete(4);
+        } else if (type && (type.includes('Maj') || type.includes('aug'))) {
+            if (intervals.has(3)) intervals.delete(3);
+        }
+        
+        // sus chords always remove any 3rd
+        if (type && type.includes('sus')) {
+             intervals.delete(3);
+             intervals.delete(4);
+        }
+
+        const finalIntervals = Array.from(intervals).sort((a, b) => a - b);
+        
+        const rootNoteIndex = state.rootNote ? (NOTES.indexOf(state.rootNote) !== -1 ? NOTES.indexOf(state.rootNote) : NOTES_FLAT.indexOf(state.rootNote)) : -1;
+        const finalDegrees = finalIntervals.map(i => DEGREE_NAMES[(i - rootNoteIndex + 12) % 12]);
+        
+        return { intervals: finalIntervals, degrees: finalDegrees };
     }
 
     function calculateScaleNotes(rootIndex, scaleType) {
@@ -536,7 +574,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function highlightChord(noteMap, rootNoteIndex) {
-         const TENSION_DEGREE_NAMES = ['♭7', '7', '9', '11', '13'];
+         const TENSION_DEGREE_NAMES = ['♭7', '7', '9', '11', '13', '♭9'];
          const noteIndicesToHighlight = Object.keys(noteMap).map(n => parseInt(n));
          for (let s = 0; s < STRING_COUNT; s++) {
             for (let f = 0; f <= FRET_COUNT; f++) {
