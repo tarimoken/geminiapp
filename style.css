@@ -61,7 +61,7 @@ body {
 .major-penta { background-color: #8b5cf6; }
 .minor-penta { background-color: #f97316; }
 
-.control-btn, .diatonic-chord-btn {
+.control-btn {
     transition: all 0.2s ease-in-out;
 }
 
@@ -71,6 +71,57 @@ body {
     transform: scale(1.05); 
     border-color: #2563eb;
 }
+
+.diatonic-mode-btn {
+    color: #4b5563;
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+}
+.diatonic-mode-btn.active {
+    background-color: white;
+    color: #1f2937;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+}
+
+/* Diatonic Chord New Styles */
+.diatonic-chord-label {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 60px;
+    height: 42px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: default;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.diatonic-label-tonic {
+    background-color: #e0f2f1;
+    border: 1px solid #b2dfdb;
+    color: #00796b;
+}
+.diatonic-label-subdominant {
+    background-color: #e3f2fd;
+    border: 1px solid #bbdefb;
+    color: #1976d2;
+}
+.diatonic-label-dominant {
+    background-color: #ffebee;
+    border: 1px solid #ffcdd2;
+    color: #d32f2f;
+}
+.diatonic-degree-roman {
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: inherit;
+    opacity: 0.8;
+}
+.diatonic-chord-label .accidental {
+    font-size: 0.8em;
+}
+
 
 .toggle-switch {
     position: relative;
@@ -91,23 +142,6 @@ input:checked + .slider { background-color: #22c55e; }
 input:checked + .slider:before { transform: translateX(20px); }
 input:disabled + .slider { cursor: not-allowed; background-color: #e5e7eb; }
 .toggle-label-disabled { color: #9ca3af; cursor: not-allowed; }
-
-.saved-chord-btn {
-    cursor: grab;
-    position: relative;
-}
-.sortable-ghost {
-    opacity: 0.4;
-    background: #c7d2fe;
-}
-.delete-chord-btn {
-    position: absolute; top: -8px; right: -8px; width: 20px; height: 20px;
-    background-color: #ef4444; color: white; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 12px; line-height: 1; border: 2px solid white;
-    cursor: pointer; opacity: 0; transition: opacity 0.2s ease-in-out;
-}
-.saved-chord-btn:hover .delete-chord-btn { opacity: 1; }
 
 button:disabled, select:disabled {
     background-color: #e5e7eb;

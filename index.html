@@ -22,9 +22,9 @@
                         <div id="piano-keyboard-container" class="w-full mt-2 self-stretch">
                             </div>
                     </div>
-                    <div class="flex-shrink-0">
-                        <button id="save-reverse-chord-button" class="hidden bg-green-500 hover:bg-green-600 text-white rounded py-1 px-3 text-xs font-semibold transition-colors mr-2">保存</button>
+                    <div class="flex-shrink-0 flex flex-col space-y-2">
                         <button id="reverse-lookup-toggle" class="border border-gray-400 bg-gray-200 hover:bg-gray-300 rounded py-1 px-3 text-xs font-semibold text-gray-800 transition-colors">逆引き</button>
+                        <button id="reset-button" class="bg-red-500 hover:bg-red-600 text-white rounded py-1 px-3 text-xs font-semibold transition-colors">リセット</button>
                     </div>
                 </div>
                 
@@ -33,10 +33,6 @@
                         <div id="combined-chord-selector" class="grid grid-cols-5 md:grid-cols-6 gap-1"></div>
                     </div>
                     <div class="space-y-2">
-                        <div>
-                            <h3 class="font-bold text-sm mb-1 text-gray-700">ベースノート (On)</h3>
-                            <select id="bass-note-selector" class="w-full border border-gray-300 rounded-md p-1.5 text-sm bg-white"></select>
-                        </div>
                          <div class="flex items-center justify-between">
                              <span class="font-medium text-xs text-gray-600">メジャーペンタ</span>
                              <label class="toggle-switch"><input type="checkbox" id="major-penta-toggle"><span class="slider"></span></label>
@@ -57,55 +53,31 @@
                             <label for="fret-count-input" class="font-medium text-xs text-gray-600">フレット数</label>
                             <input type="number" id="fret-count-input" value="15" min="12" max="24" class="w-16 border border-gray-300 rounded-md p-0.5 text-center text-xs">
                         </div>
+                        <div class="flex items-center justify-between pt-1 border-t mt-1">
+                            <label for="bass-note-selector" class="font-medium text-xs text-gray-600">ベースノート</label>
+                            <select id="bass-note-selector" class="w-24 border border-gray-300 rounded-md p-0.5 text-xs bg-white"></select>
+                        </div>
                     </div>
                 </div>
             </div>
             <div id="reverse-lookup-controls" class="hidden mt-3">
-                </div>
-            <div class="mt-2 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
-                <button id="save-chord-button" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1.5 sm:py-1 px-4 rounded-md transition-colors text-sm">現在のコードをプリセットに追加</button>
-                <button id="reset-button" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-1.5 sm:py-1 px-4 rounded-md transition-colors text-sm">選択をリセット</button>
+                 <p class="text-sm text-center text-gray-600">フレットボード上の音をクリックしてコードを検索します。</p>
             </div>
         </div>
         
         <div id="diatonic-container" class="bg-white p-3 rounded-lg shadow-md mb-3">
-            <h3 class="font-bold text-sm mb-2 text-gray-700">ダイアトニックコード</h3>
+            <h3 class="font-bold text-sm mb-2 text-gray-700">ダイアトニックコード (7th)</h3>
             <div class="flex flex-wrap items-center gap-4 mb-2">
                 <div>
                     <label for="diatonic-key-selector" class="font-bold text-xs text-gray-600 mr-2">キー:</label>
                     <select id="diatonic-key-selector" class="border border-gray-300 rounded-md p-1 text-xs bg-white"></select>
                 </div>
-                <div>
-                    <label for="diatonic-mode-selector" class="font-bold text-xs text-gray-600 mr-2">モード:</label>
-                    <select id="diatonic-mode-selector" class="border border-gray-300 rounded-md p-1 text-xs bg-white">
-                        <option value="major">メジャー</option>
-                        <option value="minor">マイナー</option>
-                    </select>
+                <div id="diatonic-mode-selector-container" class="flex items-center space-x-1 rounded-md bg-gray-200 p-0.5">
+                    <button data-mode="major" class="diatonic-mode-btn flex-1 px-3 py-0.5 text-xs rounded-md font-semibold">メジャー</button>
+                    <button data-mode="minor" class="diatonic-mode-btn flex-1 px-3 py-0.5 text-xs rounded-md font-semibold">マイナー</button>
                 </div>
             </div>
             <div id="diatonic-chords-container" class="flex flex-wrap gap-2">
-                </div>
-        </div>
-
-        <div id="current-progression-container" class="bg-white p-3 rounded-lg shadow-md mb-3">
-            <div class="flex justify-between items-center mb-2">
-                 <h3 class="font-bold text-sm text-gray-700">現在のコード進行</h3>
-                 <button id="clear-progression-button" class="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-1 px-3 rounded-md transition-colors text-xs">クリア</button>
-            </div>
-            <div id="saved-chords-container" class="flex flex-wrap gap-2 min-h-[34px] border border-dashed border-gray-300 rounded-lg p-2">
-                <span id="presets-placeholder" class="text-gray-400 text-xs">コードを追加してください</span>
-            </div>
-        </div>
-        
-        <div id="progression-management-container" class="bg-white p-3 rounded-lg shadow-md">
-            <h3 class="font-bold text-sm mb-2 text-gray-700">コード進行の管理</h3>
-            <div class="flex flex-wrap items-center gap-2">
-                <input type="text" id="progression-name-input" class="w-full sm:flex-1 border border-gray-300 rounded-md p-1.5 text-sm" placeholder="進行の名前 (例: Aメロ)">
-                <button id="save-progression-button" class="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-4 rounded-md transition-colors text-sm">進行を保存</button>
-                <select id="progression-selector" class="w-full sm:flex-1 border border-gray-300 rounded-md p-1.5 text-sm">
-                    <option value="">保存した進行を読込...</option>
-                </select>
-                <button id="delete-progression-button" class="w-full sm:w-auto bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-4 rounded-md transition-colors text-sm" disabled>選択中の進行を削除</button>
             </div>
         </div>
 

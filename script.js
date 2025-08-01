@@ -33,9 +33,23 @@ document.addEventListener('DOMContentLoaded', () => {
         minorPentatonic: { name: 'Minor Pentatonic', intervals: [0, 3, 5, 7, 10] },
     };
 
-    const DIATONIC_PATTERNS = {
-        major: { intervals: [0, 2, 4, 5, 7, 9, 11], types: ['Maj', 'min', 'min', 'Maj', 'Maj', 'min', 'dim'] },
-        minor: { intervals: [0, 2, 3, 5, 7, 8, 10], types: ['min', 'dim', 'Maj', 'min', 'min', 'Maj', 'Maj'] }
+    const DIATONIC_INFO = {
+        intervals: {
+            major: [0, 2, 4, 5, 7, 9, 11],
+            minor: [0, 2, 3, 5, 7, 8, 10]
+        },
+        types_7th: {
+            major: ['M7', 'm7', 'm7', 'M7', '7', 'm7', 'm7b5'],
+            minor: ['m7', 'm7b5', 'M7', 'm7', 'm7', 'M7', '7']
+        },
+        degrees: {
+            major: ['I', 'IIm', 'IIIm', 'IV', 'V', 'VIm', 'VIIm-5'],
+            minor: ['im', 'iim-5', 'III', 'ivm', 'vm', 'VI', 'VII']
+        },
+        functions: {
+            major: ['tonic', 'subdominant', 'tonic', 'subdominant', 'dominant', 'tonic', 'dominant'],
+            minor: ['tonic', 'subdominant', 'tonic', 'subdominant', 'dominant', 'tonic', 'dominant']
+        }
     };
 
     // --- UI ELEMENT REFERENCES ---
@@ -50,33 +64,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const degreeDisplayToggle = document.getElementById('degree-display-toggle');
     const degreeToggleLabel = document.getElementById('degree-toggle-label');
     const notationToggle = document.getElementById('notation-toggle');
-    const saveChordButton = document.getElementById('save-chord-button');
-    const savedChordsContainer = document.getElementById('saved-chords-container');
-    const presetsPlaceholder = document.getElementById('presets-placeholder');
-    const progressionNameInput = document.getElementById('progression-name-input');
-    const saveProgressionButton = document.getElementById('save-progression-button');
-    const progressionSelector = document.getElementById('progression-selector');
-    const deleteProgressionButton = document.getElementById('delete-progression-button');
-    const clearProgressionButton = document.getElementById('clear-progression-button');
     const diatonicKeySelector = document.getElementById('diatonic-key-selector');
-    const diatonicModeSelector = document.getElementById('diatonic-mode-selector');
+    const diatonicModeSelectorContainer = document.getElementById('diatonic-mode-selector-container');
     const diatonicChordsContainer = document.getElementById('diatonic-chords-container');
     const reverseLookupToggle = document.getElementById('reverse-lookup-toggle');
-    const saveReverseChordButton = document.getElementById('save-reverse-chord-button');
     const normalControls = document.getElementById('normal-controls');
     const reverseLookupControls = document.getElementById('reverse-lookup-controls');
     const pianoKeyboardContainer = document.getElementById('piano-keyboard-container');
 
-
     let fretboardGrid = [];
-    let currentChordPreset = [];
-    let savedProgressions = {};
 
     // --- STATE MANAGEMENT ---
     let state = {
         rootNote: null, chordType: null, bassNote: null,
         showMajorPenta: false, showMinorPenta: false, displayAsDegrees: false,
-        notationMode: 'sharps'
+        notationMode: 'sharps',
+        diatonicMode: 'major'
     };
     let isReverseLookupMode = false;
     let selectedNotesForLookup = [];
@@ -85,32 +88,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- INITIALIZATION ---
     function initialize() {
         createPianoKeyboard();
-        loadProgressionsFromStorage();
         createFretboard();
         createChordButtons();
         setupDiatonicPanel();
         addEventListeners();
-        initializeSortable();
-        renderProgressionSelector();
         updateControlsFromState();
         updateDisplay();
-        reverseLookupControls.appendChild(document.getElementById('current-progression-container'));
     }
 
     function formatNoteHTML(name) {
         if (!name) return '';
-        return name.replace(/([♯♭])/g, '<span class="accidental">$1</span>');
-    }
-
-    function initializeSortable() {
-        new Sortable(savedChordsContainer, {
-            animation: 150,
-            ghostClass: 'sortable-ghost',
-            onEnd: (evt) => {
-                const element = currentChordPreset.splice(evt.oldIndex, 1)[0];
-                currentChordPreset.splice(evt.newIndex, 0, element);
-            }
-        });
+        return name.replace(/([♯♭]|-5)/g, '<span class="accidental">$1</span>');
     }
 
     function createFretboard() {
@@ -234,6 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
         notationToggle.addEventListener('change', (e) => {
             state.notationMode = e.target.checked ? 'flats' : 'sharps';
             createChordButtons();
+            setupDiatonicPanel();
             updateControlsFromState();
             updateDisplay();
         });
@@ -245,14 +234,14 @@ document.addEventListener('DOMContentLoaded', () => {
             createFretboard();
             updateDisplay();
         });
-        saveChordButton.addEventListener('click', saveChordToPreset);
-        saveReverseChordButton.addEventListener('click', saveReverseChord);
-        saveProgressionButton.addEventListener('click', saveProgression);
-        progressionSelector.addEventListener('change', loadProgression);
-        deleteProgressionButton.addEventListener('click', deleteProgression);
-        clearProgressionButton.addEventListener('click', clearCurrentProgression);
         diatonicKeySelector.addEventListener('change', renderDiatonicChords);
-        diatonicModeSelector.addEventListener('change', renderDiatonicChords);
+        diatonicModeSelectorContainer.addEventListener('click', (e) => {
+            const btn = e.target.closest('.diatonic-mode-btn');
+            if(btn && btn.dataset.mode) {
+                state.diatonicMode = btn.dataset.mode;
+                renderDiatonicChords();
+            }
+        });
         reverseLookupToggle.addEventListener('click', toggleReverseLookupMode);
     }
 
@@ -303,7 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function resetAll() {
-        state = { rootNote: null, chordType: null, bassNote: null, showMajorPenta: false, showMinorPenta: false, displayAsDegrees: false, notationMode: state.notationMode };
+        state = { ...state, rootNote: null, chordType: null, bassNote: null, showMajorPenta: false, showMinorPenta: false, displayAsDegrees: false };
         if (isReverseLookupMode) {
             selectedNotesForLookup = [];
             updateReverseLookupFretboard();
@@ -315,113 +304,6 @@ document.addEventListener('DOMContentLoaded', () => {
             updateDisplay();
         }
         triggerPianoUpdate();
-    }
-
-    function saveChordToPreset() {
-        const chordName = generateChordName(state, false);
-        if (!state.rootNote || chordName === '--') {
-            alert('コードをプリセットに追加するには、まずフレットボードをクリックしてルートノートを選択してください。');
-            return;
-        }
-        const newSavedChord = { id: Date.now().toString(), name: chordName, state: JSON.parse(JSON.stringify(state)) };
-        currentChordPreset.push(newSavedChord);
-        renderCurrentProgression();
-    }
-
-    function recallChordState(id) {
-        const saved = currentChordPreset.find(c => c.id === id);
-        if (saved) {
-            if (isReverseLookupMode) toggleReverseLookupMode();
-            state = JSON.parse(JSON.stringify(saved.state));
-            updateControlsFromState();
-            updateDisplay();
-        }
-    }
-
-    function deleteChordFromPreset(id) {
-        currentChordPreset = currentChordPreset.filter(c => c.id !== id);
-        renderCurrentProgression();
-    }
-
-    function renderCurrentProgression() {
-        savedChordsContainer.innerHTML = '';
-        if (currentChordPreset.length === 0) {
-            savedChordsContainer.appendChild(presetsPlaceholder);
-        } else {
-            currentChordPreset.forEach(chord => {
-                const btn = document.createElement('div');
-                btn.className = 'saved-chord-btn bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-1 px-2.5 border border-gray-400 rounded shadow transition-colors text-xs';
-                btn.innerHTML = formatNoteHTML(chord.name);
-                btn.dataset.id = chord.id;
-                btn.addEventListener('click', () => recallChordState(chord.id));
-                const deleteBtn = document.createElement('button');
-                deleteBtn.className = 'delete-chord-btn'; deleteBtn.innerHTML = '&times;';
-                deleteBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteChordFromPreset(chord.id); });
-                btn.appendChild(deleteBtn);
-                savedChordsContainer.appendChild(btn);
-            });
-        }
-    }
-
-    function saveProgression() {
-        const name = progressionNameInput.value.trim();
-        if (!name) { alert('進行の名前を入力してください。'); return; }
-        if (currentChordPreset.length === 0) { alert('保存するコードがありません。'); return; }
-        savedProgressions[name] = JSON.parse(JSON.stringify(currentChordPreset));
-        progressionNameInput.value = '';
-        saveProgressionsToStorage();
-        renderProgressionSelector();
-        progressionSelector.value = name;
-        deleteProgressionButton.disabled = false;
-    }
-
-    function loadProgression() {
-        const name = progressionSelector.value;
-        deleteProgressionButton.disabled = !name;
-        if (name && savedProgressions[name]) {
-            currentChordPreset = JSON.parse(JSON.stringify(savedProgressions[name]));
-            renderCurrentProgression();
-        } else if (!name) {
-            clearCurrentProgression();
-        }
-    }
-
-    function deleteProgression() {
-        const name = progressionSelector.value;
-        if (name && window.confirm(`「${name}」を削除しますか？`)) {
-            delete savedProgressions[name];
-            saveProgressionsToStorage();
-            renderProgressionSelector();
-            clearCurrentProgression();
-        }
-    }
-
-    function clearCurrentProgression() {
-        currentChordPreset = [];
-        progressionSelector.value = "";
-        deleteProgressionButton.disabled = true;
-        renderCurrentProgression();
-    }
-
-    function renderProgressionSelector() {
-        const currentVal = progressionSelector.value;
-        progressionSelector.innerHTML = '<option value="">保存した進行を読込...</option>';
-        Object.keys(savedProgressions).sort().forEach(name => {
-            const option = document.createElement('option');
-            option.value = name; option.textContent = name;
-            progressionSelector.appendChild(option);
-        });
-        progressionSelector.value = currentVal;
-        deleteProgressionButton.disabled = !progressionSelector.value;
-    }
-
-    function saveProgressionsToStorage() {
-        localStorage.setItem('guitarFretboardProgressions', JSON.stringify(savedProgressions));
-    }
-
-    function loadProgressionsFromStorage() {
-        const stored = localStorage.getItem('guitarFretboardProgressions');
-        if (stored) { savedProgressions = JSON.parse(stored); }
     }
 
     function updateControlsFromState() {
@@ -636,20 +518,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return useHTML ? formatNoteHTML(name) : name;
     }
     
-    // --- PIANO KEYBOARD FUNCTIONS (REWRITTEN) ---
-
-    /**
-     * ピアノ鍵盤を生成します。
-     * F3からC6の範囲で、白鍵と黒鍵をフラットな構造でコンテナに直接追加します。
-     * 黒鍵の位置はJavaScriptで動的に計算・設定され、堅牢な描画を実現します。
-     */
+    // --- PIANO KEYBOARD FUNCTIONS ---
     function createPianoKeyboard() {
         pianoKeyboardContainer.innerHTML = '';
         const startMidi = 53; // F3
         const endMidi = 84;   // C6
         const noteIsBlackMap = { 1: true, 3: true, 6: true, 8: true, 10: true }; // C=0
-
-        // 1. 表示範囲内の白鍵の数を数える
         let whiteKeyCount = 0;
         for (let midi = startMidi; midi <= endMidi; midi++) {
             if (!noteIsBlackMap[midi % 12]) {
@@ -657,21 +531,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         const whiteKeyWidth = 100 / whiteKeyCount;
-        const blackKeyWidth = whiteKeyWidth * 0.6; // 黒鍵の幅を白鍵に対する比率で定義
-
-        // 2. 白鍵と黒鍵を生成して配置
+        const blackKeyWidth = whiteKeyWidth * 0.6;
         let whiteKeysPassed = 0;
         for (let midi = startMidi; midi <= endMidi; midi++) {
             const noteIndex = midi % 12;
             const isBlack = noteIsBlackMap[noteIndex];
-            
             const keyElement = document.createElement('div');
             keyElement.dataset.midi = midi;
-
             if (isBlack) {
                 keyElement.className = 'piano-key-black';
                 keyElement.style.width = `${blackKeyWidth}%`;
-                // 黒鍵の位置を、直前の白鍵の終端を基準に計算
                 const leftOffset = (whiteKeysPassed * whiteKeyWidth) - (blackKeyWidth / 2);
                 keyElement.style.left = `${leftOffset}%`;
                 pianoKeyboardContainer.appendChild(keyElement);
@@ -684,17 +553,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    /**
-     * 選択されたコードの構成音をピアノ鍵盤上でハイライトします。
-     * MIDIノート番号に基づいて対応する鍵盤要素を探し、クラスを付与します。
-     */
     function updatePianoHighlight() {
-        // 1. 全てのハイライトをリセット
         document.querySelectorAll('.piano-key-white.highlighted, .piano-key-black.highlighted').forEach(key => {
             key.classList.remove('highlighted');
         });
 
-        // 2. ハイライト対象のコード情報を取得
         let sourceState = null;
         if (isReverseLookupMode && identifiedChordState) {
             sourceState = identifiedChordState;
@@ -703,7 +566,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (!sourceState) return;
 
-        // 3. コード構成音のMIDIノート番号を計算
         const currentNotes = sourceState.notationMode === 'flats' ? NOTES_FLAT : NOTES;
         const rootNoteIndex = currentNotes.indexOf(sourceState.rootNote);
         if (rootNoteIndex === -1) return;
@@ -712,11 +574,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!chordData || !chordData.intervals) return;
 
         const pianoMaxMidi = 84; // C6
-        
-        // C4オクターブを基準にMIDIノートを計算
         let baseMidi = 60 + rootNoteIndex; 
         
-        // コードの最高音が鍵盤の表示範囲を超える場合、全体を1オクターブ下げる
         const checkMidiNotes = chordData.intervals.map(interval => baseMidi + interval);
         if (Math.max(...checkMidiNotes) > pianoMaxMidi) {
             baseMidi -= 12;
@@ -726,7 +585,6 @@ document.addEventListener('DOMContentLoaded', () => {
             chordData.intervals.map(interval => baseMidi + interval)
         );
 
-        // 4. 対応する鍵盤のDOM要素をハイライト
         midiNotesToHighlight.forEach(midi => {
             const key = pianoKeyboardContainer.querySelector(`[data-midi="${midi}"]`);
             if (key) {
@@ -742,6 +600,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- DIATONIC FUNCTIONS ---
     function setupDiatonicPanel() {
         const notes = state.notationMode === 'flats' ? NOTES_FLAT : NOTES;
+        const currentKey = diatonicKeySelector.value;
         diatonicKeySelector.innerHTML = '';
         notes.forEach(note => {
             const option = document.createElement('option');
@@ -749,38 +608,47 @@ document.addEventListener('DOMContentLoaded', () => {
             option.textContent = note;
             diatonicKeySelector.appendChild(option);
         });
+        diatonicKeySelector.value = currentKey;
         renderDiatonicChords();
     }
 
     function renderDiatonicChords() {
+        diatonicModeSelectorContainer.querySelectorAll('.diatonic-mode-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.mode === state.diatonicMode);
+        });
+
         diatonicChordsContainer.innerHTML = '';
         const key = diatonicKeySelector.value;
-        const mode = diatonicModeSelector.value;
+        const mode = state.diatonicMode;
 
         const currentNotes = state.notationMode === 'flats' ? NOTES_FLAT : NOTES;
         const keyIndex = currentNotes.indexOf(key);
         if (keyIndex === -1) return;
 
-        const pattern = DIATONIC_PATTERNS[mode];
-        const displayNotes = currentNotes;
+        const scaleIntervals = DIATONIC_INFO.intervals[mode];
+        const chordTypes = DIATONIC_INFO.types_7th[mode];
+        const degreeNames = DIATONIC_INFO.degrees[mode];
+        const functions = DIATONIC_INFO.functions[mode];
 
-        pattern.intervals.forEach((interval, i) => {
+        scaleIntervals.forEach((interval, i) => {
             const rootNoteIndex = (keyIndex + interval) % 12;
-            const rootNoteName = displayNotes[rootNoteIndex];
-            const chordType = pattern.types[i];
+            const rootNoteName = currentNotes[rootNoteIndex];
+            const chordType = chordTypes[i];
+            
+            const chordLabel = document.createElement('div');
+            const chordFunction = functions[i];
+            chordLabel.className = `diatonic-chord-label diatonic-label-${chordFunction}`;
 
-            const btn = document.createElement('button');
-            btn.className = 'diatonic-chord-btn border border-gray-400 bg-gray-100 hover:bg-gray-200 rounded py-2 px-3 text-sm font-semibold text-gray-800';
-            btn.innerHTML = formatNoteHTML(`${rootNoteName}${CHORD_INTERVALS[chordType].notation}`);
-            btn.addEventListener('click', () => {
-                if (isReverseLookupMode) toggleReverseLookupMode();
-                state.rootNote = rootNoteName;
-                state.chordType = chordType;
-                state.bassNote = null;
-                updateControlsFromState();
-                updateDisplay();
-            });
-            diatonicChordsContainer.appendChild(btn);
+            const degreeSpan = document.createElement('span');
+            degreeSpan.className = 'diatonic-degree-roman';
+            degreeSpan.innerHTML = formatNoteHTML(degreeNames[i]);
+            chordLabel.appendChild(degreeSpan);
+
+            const chordNameSpan = document.createElement('span');
+            chordNameSpan.innerHTML = formatNoteHTML(`${rootNoteName}${CHORD_INTERVALS[chordType].notation}`);
+            chordLabel.appendChild(chordNameSpan);
+            
+            diatonicChordsContainer.appendChild(chordLabel);
         });
     }
 
@@ -793,8 +661,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         normalControls.classList.toggle('hidden', isReverseLookupMode);
         reverseLookupControls.classList.toggle('hidden', !isReverseLookupMode);
-        saveReverseChordButton.classList.toggle('hidden', !isReverseLookupMode);
-        saveChordButton.classList.toggle('hidden', isReverseLookupMode);
 
         if (isReverseLookupMode) {
             fullChordNameDisplay.innerHTML = "指板を選択";
@@ -833,7 +699,6 @@ document.addEventListener('DOMContentLoaded', () => {
             fullChordNameDisplay.classList.remove('text-lg', 'text-red-500');
             fullChordNameDisplay.classList.add('text-sm', 'text-gray-500');
             identifiedChordState = null;
-            saveReverseChordButton.disabled = true;
             return;
         }
 
@@ -843,13 +708,11 @@ document.addEventListener('DOMContentLoaded', () => {
             fullChordNameDisplay.classList.add('text-lg', 'text-red-500');
             fullChordNameDisplay.classList.remove('text-sm', 'text-gray-500');
             identifiedChordState = result.state;
-            saveReverseChordButton.disabled = false;
         } else {
             fullChordNameDisplay.innerHTML = "不明なコード";
             fullChordNameDisplay.classList.remove('text-lg', 'text-red-500');
             fullChordNameDisplay.classList.add('text-sm', 'text-gray-500');
             identifiedChordState = null;
-            saveReverseChordButton.disabled = true;
         }
     }
 
@@ -898,20 +761,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         return null;
-    }
-
-    function saveReverseChord() {
-        if (identifiedChordState) {
-            const finalState = { ...state, ...identifiedChordState, bassNote: null };
-            const chordName = generateChordName(finalState, false);
-            const newSavedChord = {
-                id: Date.now().toString(),
-                name: chordName,
-                state: JSON.parse(JSON.stringify(finalState))
-            };
-            currentChordPreset.push(newSavedChord);
-            renderCurrentProgression();
-        }
     }
 
     // --- START THE APP ---
