@@ -17,23 +17,20 @@
         <div id="controls-container" class="bg-white p-2 rounded-lg shadow-md mb-3">
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div class="flex items-center justify-between bg-gray-100 p-2 rounded-lg lg:col-span-1">
-                    <div class="flex items-center">
+                    <div class="flex flex-col items-start flex-grow mr-2">
                         <span id="full-chord-name-display" class="font-mono text-base font-bold text-red-500">--</span>
+                        <div id="piano-keyboard-container" class="w-full mt-2 self-stretch">
+                            </div>
                     </div>
-                    <div>
+                    <div class="flex-shrink-0">
                         <button id="save-reverse-chord-button" class="hidden bg-green-500 hover:bg-green-600 text-white rounded py-1 px-3 text-xs font-semibold transition-colors mr-2">保存</button>
                         <button id="reverse-lookup-toggle" class="border border-gray-400 bg-gray-200 hover:bg-gray-300 rounded py-1 px-3 text-xs font-semibold text-gray-800 transition-colors">逆引き</button>
                     </div>
                 </div>
                 
                 <div id="normal-controls" class="contents">
-                    <div>
-                        <h3 class="font-bold text-sm mb-1 text-gray-700">コードタイプ</h3>
-                        <div id="chord-type-selector" class="grid grid-cols-3 gap-1"></div>
-                    </div>
-                    <div>
-                        <h3 class="font-bold text-sm mb-1 text-gray-700">テンション</h3>
-                        <div id="tension-selector" class="grid grid-cols-3 gap-1"></div>
+                    <div class="lg:col-span-2">
+                        <div id="combined-chord-selector" class="grid grid-cols-5 md:grid-cols-6 gap-1"></div>
                     </div>
                     <div class="space-y-2">
                         <div>

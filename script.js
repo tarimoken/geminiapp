@@ -12,8 +12,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'min':  { name: 'Minor', intervals: [0, 3, 7], degrees: ['R', '♭3', '5'], notation: 'm'},
         'dim':  { name: 'Diminished', intervals: [0, 3, 6], degrees: ['R', '♭3', '♭5'], notation: 'dim'},
         'aug':  { name: 'Augmented', intervals: [0, 4, 8], degrees: ['R', '3', '♯5'], notation: 'aug'},
-        'sus2': { name: 'Suspended 2', intervals: [0, 2, 7], degrees: ['R', '2', '5'], replaces: 3, notation: 'sus2' },
-        'sus4': { name: 'Suspended 4', intervals: [0, 5, 7], degrees: ['R', '4', '5'], replaces: 3, notation: 'sus4' },
+        'sus2': { name: 'Suspended 2', intervals: [0, 2, 7], degrees: ['R', '2', '5'], notation: 'sus2' },
+        'sus4': { name: 'Suspended 4', intervals: [0, 5, 7], degrees: ['R', '4', '5'], notation: 'sus4' },
         '7':    { name: 'Dominant 7th', intervals: [0, 4, 7, 10], degrees: ['R', '3', '5', '♭7'], notation: '7' },
         'M7':   { name: 'Major 7th', intervals: [0, 4, 7, 11], degrees: ['R', '3', '5', '7'], notation: 'M7' },
         'm7':   { name: 'Minor 7th', intervals: [0, 3, 7, 10], degrees: ['R', '♭3', '5', '♭7'], notation: 'm7' },
@@ -21,13 +21,13 @@ document.addEventListener('DOMContentLoaded', () => {
         'dim7': { name: 'Diminished 7th', intervals: [0, 3, 6, 9], degrees: ['R', '♭3', '♭5', '♭♭7'], notation: 'dim7' },
         '6':    { name: 'Major 6th', intervals: [0, 4, 7, 9], degrees: ['R', '3', '5', '6'], notation: '6' },
         'm6':   { name: 'Minor 6th', intervals: [0, 3, 7, 9], degrees: ['R', '♭3', '5', '6'], notation: 'm6' },
-        '9':    { name: 'Dominant 9th', intervals: [0, 2, 4, 7, 10], degrees: ['R', '9', '3', '5', '♭7'], notation: '9' },
-        'M9':   { name: 'Major 9th', intervals: [0, 2, 4, 7, 11], degrees: ['R', '9', '3', '5', '7'], notation: 'M9' },
-        'm9':   { name: 'Minor 9th', intervals: [0, 2, 3, 7, 10], degrees: ['R', '9', '♭3', '5', '♭7'], notation: 'm9' },
-        '7s9':  { name: '7th sharp 9', intervals: [0, 3, 4, 7, 10], degrees: ['R', '♯9', '3', '5', '♭7'], notation: '7(♯9)'},
-        '7b9':  { name: '7th flat 9', intervals: [0, 1, 4, 7, 10], degrees: ['R', '♭9', '3', '5', '♭7'], notation: '7(♭9)'},
+        '9':    { name: 'Dominant 9th', intervals: [0, 4, 7, 10, 14], degrees: ['R', '3', '5', '♭7', '9'], notation: '9' },
+        'M9':   { name: 'Major 9th', intervals: [0, 4, 7, 11, 14], degrees: ['R', '3', '5', '7', '9'], notation: 'M9' },
+        'm9':   { name: 'Minor 9th', intervals: [0, 3, 7, 10, 14], degrees: ['R', '♭3', '5', '♭7', '9'], notation: 'm9' },
+        '7s9':  { name: '7th sharp 9', intervals: [0, 4, 7, 10, 15], degrees: ['R', '3', '5', '♭7', '♯9'], notation: '7(♯9)'},
+        '7b9':  { name: '7th flat 9', intervals: [0, 4, 7, 10, 13], degrees: ['R', '3', '5', '♭7', '♭9'], notation: '7(♭9)'},
     };
-    
+
     const SCALES = {
         majorPentatonic: { name: 'Major Pentatonic', intervals: [0, 2, 4, 7, 9] },
         minorPentatonic: { name: 'Minor Pentatonic', intervals: [0, 3, 5, 7, 10] },
@@ -37,17 +37,11 @@ document.addEventListener('DOMContentLoaded', () => {
         major: { intervals: [0, 2, 4, 5, 7, 9, 11], types: ['Maj', 'min', 'min', 'Maj', 'Maj', 'min', 'dim'] },
         minor: { intervals: [0, 2, 3, 5, 7, 8, 10], types: ['min', 'dim', 'Maj', 'min', 'min', 'Maj', 'Maj'] }
     };
-    
-    const ACTIVE_CLASS_MAP = {
-        chordType: 'active-type',
-        tensions: 'active-tension'
-    };
-    
+
     // --- UI ELEMENT REFERENCES ---
     const fretboardContainer = document.getElementById('fretboard-container');
     const fullChordNameDisplay = document.getElementById('full-chord-name-display');
-    const chordTypeSelector = document.getElementById('chord-type-selector');
-    const tensionSelector = document.getElementById('tension-selector');
+    const combinedChordSelector = document.getElementById('combined-chord-selector');
     const bassNoteSelector = document.getElementById('bass-note-selector');
     const majorPentaToggle = document.getElementById('major-penta-toggle');
     const minorPentaToggle = document.getElementById('minor-penta-toggle');
@@ -71,6 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveReverseChordButton = document.getElementById('save-reverse-chord-button');
     const normalControls = document.getElementById('normal-controls');
     const reverseLookupControls = document.getElementById('reverse-lookup-controls');
+    const pianoKeyboardContainer = document.getElementById('piano-keyboard-container');
 
 
     let fretboardGrid = [];
@@ -79,9 +74,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- STATE MANAGEMENT ---
     let state = {
-        rootNote: null, chordType: null, tensions: [], bassNote: null,
+        rootNote: null, chordType: null, bassNote: null,
         showMajorPenta: false, showMinorPenta: false, displayAsDegrees: false,
-        notationMode: 'sharps' // 'sharps' or 'flats'
+        notationMode: 'sharps'
     };
     let isReverseLookupMode = false;
     let selectedNotesForLookup = [];
@@ -89,9 +84,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- INITIALIZATION ---
     function initialize() {
+        createPianoKeyboard();
         loadProgressionsFromStorage();
         createFretboard();
-        createControlButtons();
+        createChordButtons();
         setupDiatonicPanel();
         addEventListeners();
         initializeSortable();
@@ -100,7 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateDisplay();
         reverseLookupControls.appendChild(document.getElementById('current-progression-container'));
     }
-    
+
     function formatNoteHTML(name) {
         if (!name) return '';
         return name.replace(/([♯♭])/g, '<span class="accidental">$1</span>');
@@ -180,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 markerContainer.appendChild(marker1);
                 markerContainer.appendChild(marker2);
             }
-            
+
             const fretNum = document.createElement('span');
             fretNum.textContent = f;
 
@@ -192,30 +188,31 @@ document.addEventListener('DOMContentLoaded', () => {
         fretboardContainer.appendChild(scrollWrapper);
     }
 
-    function createControlButtons() {
+    function createChordButtons() {
         const rootNotes = state.notationMode === 'flats' ? NOTES_FLAT : NOTES;
         bassNoteSelector.innerHTML = '<option value="">なし</option>';
         rootNotes.forEach(note => {
             const option = document.createElement('option');
             option.value = note;
-            option.textContent = note; // Leave as text for <option>
+            option.textContent = note;
             bassNoteSelector.appendChild(option);
         });
 
-        const chordTypes = ['Maj', 'min', 'dim', 'aug', 'sus2', 'sus4'];
-        createButtons(chordTypeSelector, chordTypes, 'chordType', 'single');
-        const tensions = ['6', 'm6', '7', 'M7', 'm7', '9', 'M9', 'm9', '7b9', '7s9', 'm7b5', 'dim7'];
-        createButtons(tensionSelector, tensions, 'tensions', 'multiple');
-    }
+        const buttonOrder = [
+            'Maj', 'min', 'm7b5', 'dim7', 'dim', '7', 'M7', 'm7',
+            '9', 'M9', 'm9', 'aug', 'sus2', 'sus4', '6', 'm6', '7b9', '7s9'
+        ];
 
-    function createButtons(container, items, stateKey, selectionType) {
-        container.innerHTML = '';
-        items.forEach(item => {
+        combinedChordSelector.innerHTML = '';
+        buttonOrder.forEach(item => {
             const button = document.createElement('button');
+            const notation = CHORD_INTERVALS[item]?.notation || item;
             button.className = 'control-btn border border-gray-300 rounded py-1 text-xs text-gray-700 hover:bg-gray-100';
-            button.innerHTML = formatNoteHTML(item); // Use innerHTML
-            button.dataset.value = item; button.dataset.key = stateKey; button.dataset.type = selectionType;
-            container.appendChild(button);
+            button.innerHTML = formatNoteHTML(notation === '' ? 'Maj' : notation);
+            button.dataset.value = item;
+            button.dataset.key = 'chordType';
+            button.dataset.type = 'single';
+            combinedChordSelector.appendChild(button);
         });
     }
 
@@ -236,7 +233,8 @@ document.addEventListener('DOMContentLoaded', () => {
         degreeDisplayToggle.addEventListener('change', (e) => { state.displayAsDegrees = e.target.checked; updateDisplay(); });
         notationToggle.addEventListener('change', (e) => {
             state.notationMode = e.target.checked ? 'flats' : 'sharps';
-            createControlButtons(); // Re-create buttons with correct notation
+            createChordButtons();
+            updateControlsFromState();
             updateDisplay();
         });
         resetButton.addEventListener('click', resetAll);
@@ -257,7 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
         diatonicModeSelector.addEventListener('change', renderDiatonicChords);
         reverseLookupToggle.addEventListener('click', toggleReverseLookupMode);
     }
-    
+
     function handleFretClick(fret, string) {
         const clickedCell = fretboardGrid[string][fret];
         if (clickedCell.element.classList.contains('disabled')) return;
@@ -273,7 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     selectedNotesForLookup.push({ id: noteId, string, fret, noteIndex, status: 'selected' });
                 } else if (existingNote.status === 'selected') {
                     existingNote.status = 'muted';
-                } else { // status is 'muted'
+                } else {
                     selectedNotesForLookup = selectedNotesForLookup.filter(n => n.id !== noteId);
                 }
             } else {
@@ -294,44 +292,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function handleButtonClick(button) { // Parameter changed to button element
-        const { key, value, type } = button.dataset;
+    function handleButtonClick(button) {
+        const { key, value } = button.dataset;
         if (!key) return;
 
-        if (type === 'single') {
-            state[key] = state[key] === value ? null : value;
-        } else if (type === 'multiple') {
-            if (!Array.isArray(state[key])) state[key] = [];
-            const index = state[key].indexOf(value);
-            if (index > -1) {
-                state[key].splice(index, 1);
-            } else {
-                state[key].push(value);
-            }
-        }
+        state[key] = state[key] === value ? null : value;
+
         updateControlsFromState();
         updateDisplay();
     }
 
     function resetAll() {
-        state = { rootNote: null, chordType: null, tensions: [], bassNote: null, showMajorPenta: false, showMinorPenta: false, displayAsDegrees: false, notationMode: 'sharps' };
+        state = { rootNote: null, chordType: null, bassNote: null, showMajorPenta: false, showMinorPenta: false, displayAsDegrees: false, notationMode: state.notationMode };
         if (isReverseLookupMode) {
             selectedNotesForLookup = [];
             updateReverseLookupFretboard();
-            fullChordNameDisplay.innerHTML = "指板を選択"; // Use innerHTML
+            fullChordNameDisplay.innerHTML = "指板を選択";
             fullChordNameDisplay.classList.remove('text-lg', 'text-red-500');
             fullChordNameDisplay.classList.add('text-base', 'text-gray-500');
         } else {
             updateControlsFromState();
             updateDisplay();
         }
+        triggerPianoUpdate();
     }
-    
+
     function saveChordToPreset() {
-        const chordName = generateChordName(state, false); // Get raw name for state
-        if (!state.rootNote || chordName === '--') { 
-            alert('コードをプリセットに追加するには、まずフレットボードをクリックしてルートノートを選択してください。'); 
-            return; 
+        const chordName = generateChordName(state, false);
+        if (!state.rootNote || chordName === '--') {
+            alert('コードをプリセットに追加するには、まずフレットボードをクリックしてルートノートを選択してください。');
+            return;
         }
         const newSavedChord = { id: Date.now().toString(), name: chordName, state: JSON.parse(JSON.stringify(state)) };
         currentChordPreset.push(newSavedChord);
@@ -340,28 +330,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function recallChordState(id) {
         const saved = currentChordPreset.find(c => c.id === id);
-        if (saved) { 
+        if (saved) {
             if (isReverseLookupMode) toggleReverseLookupMode();
-            state = JSON.parse(JSON.stringify(saved.state)); 
-            updateControlsFromState(); 
-            updateDisplay(); 
+            state = JSON.parse(JSON.stringify(saved.state));
+            updateControlsFromState();
+            updateDisplay();
         }
     }
-    
+
     function deleteChordFromPreset(id) {
         currentChordPreset = currentChordPreset.filter(c => c.id !== id);
         renderCurrentProgression();
     }
-    
+
     function renderCurrentProgression() {
         savedChordsContainer.innerHTML = '';
-        if (currentChordPreset.length === 0) { 
+        if (currentChordPreset.length === 0) {
             savedChordsContainer.appendChild(presetsPlaceholder);
         } else {
             currentChordPreset.forEach(chord => {
                 const btn = document.createElement('div');
                 btn.className = 'saved-chord-btn bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-1 px-2.5 border border-gray-400 rounded shadow transition-colors text-xs';
-                btn.innerHTML = formatNoteHTML(chord.name); // Use innerHTML
+                btn.innerHTML = formatNoteHTML(chord.name);
                 btn.dataset.id = chord.id;
                 btn.addEventListener('click', () => recallChordState(chord.id));
                 const deleteBtn = document.createElement('button');
@@ -372,7 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     }
-    
+
     function saveProgression() {
         const name = progressionNameInput.value.trim();
         if (!name) { alert('進行の名前を入力してください。'); return; }
@@ -384,7 +374,7 @@ document.addEventListener('DOMContentLoaded', () => {
         progressionSelector.value = name;
         deleteProgressionButton.disabled = false;
     }
-    
+
     function loadProgression() {
         const name = progressionSelector.value;
         deleteProgressionButton.disabled = !name;
@@ -433,26 +423,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const stored = localStorage.getItem('guitarFretboardProgressions');
         if (stored) { savedProgressions = JSON.parse(stored); }
     }
-    
+
     function updateControlsFromState() {
-        fullChordNameDisplay.innerHTML = generateChordName(state, true); // Use innerHTML
+        fullChordNameDisplay.innerHTML = generateChordName(state, true);
         fullChordNameDisplay.classList.add('text-lg', 'text-red-500');
         fullChordNameDisplay.classList.remove('text-base', 'text-gray-500');
-                
-        document.querySelectorAll('.control-btn').forEach(btn => {
-            const { key, value, type } = btn.dataset;
-            const activeClass = ACTIVE_CLASS_MAP[key];
-            if (!activeClass) return;
 
-            let shouldBeActive = false;
-            if (type === 'single') {
-                shouldBeActive = state[key] === value;
-            } else {
-                shouldBeActive = Array.isArray(state[key]) && state[key].includes(value);
-            }
-            btn.classList.toggle(activeClass, shouldBeActive);
+        document.querySelectorAll('.control-btn').forEach(btn => {
+            const { key, value } = btn.dataset;
+            const shouldBeActive = state[key] === value;
+            btn.classList.toggle('active-chord', shouldBeActive);
         });
-        
+
         bassNoteSelector.value = state.bassNote || '';
         majorPentaToggle.checked = state.showMajorPenta;
         minorPentaToggle.checked = state.showMinorPenta;
@@ -469,9 +451,12 @@ document.addEventListener('DOMContentLoaded', () => {
             degreeDisplayToggle.checked = false;
         }
         clearAndResetBoard();
-        
+
         if (isReverseLookupMode) return;
-        if (!isRootSelected) return;
+        if (!isRootSelected) {
+            triggerPianoUpdate();
+            return;
+        };
 
         const currentNotes = state.notationMode === 'flats' ? NOTES_FLAT : NOTES;
         let rootNoteIndex = currentNotes.indexOf(state.rootNote);
@@ -487,10 +472,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (state.showMajorPenta) highlightScale(calculateScaleNotes(rootNoteIndex, 'majorPentatonic'), 'major-penta');
         if (state.showMinorPenta) highlightScale(calculateScaleNotes(rootNoteIndex, 'minorPentatonic'), 'minor-penta');
-        const chordData = calculateChord(state.chordType, state.tensions);
+
+        const chordData = calculateChord(state.chordType);
         const chordNoteMap = {};
-        chordData.intervals.forEach((interval, i) => { const noteIndex = (rootNoteIndex + interval) % 12; chordNoteMap[noteIndex] = chordData.degrees[i]; });
+        if (chordData && chordData.intervals) {
+            chordData.intervals.forEach((interval, i) => {
+                const noteIndex = (rootNoteIndex + interval) % 12;
+                chordNoteMap[noteIndex] = chordData.degrees[i];
+            });
+        }
         highlightChord(chordNoteMap, rootNoteIndex);
+
         if (state.bassNote) {
             let bassNoteIndex = currentNotes.indexOf(state.bassNote);
             if (bassNoteIndex === -1) {
@@ -499,69 +491,46 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (bassNoteIndex !== -1) highlightBassNote(bassNoteIndex);
         }
+        triggerPianoUpdate();
     }
 
     function getDegreeName(noteIndex, rootIndex) { return DEGREE_NAMES[(noteIndex - rootIndex + 12) % 12]; }
-    
-    /**
-     * [MODIFIED]
-     * Clears all highlights and text from the fretboard.
-     * If degree display mode is active, it shows only the degree on all frets.
-     * Otherwise, it shows only the note name.
-     */
+
     function clearAndResetBoard() {
         const displayNotes = state.notationMode === 'flats' ? NOTES_FLAT : NOTES;
         let rootNoteIndex = -1;
-        // Get the index of the root note if selected
         if (state.rootNote) {
             rootNoteIndex = displayNotes.indexOf(state.rootNote);
             if (rootNoteIndex === -1) {
-                // Fallback for when notation (sharps/flats) has just been toggled
                 const otherNotes = state.notationMode === 'flats' ? NOTES : NOTES_FLAT;
                 rootNoteIndex = otherNotes.indexOf(state.rootNote);
             }
         }
-    
+
         for (let s = 0; s < STRING_COUNT; s++) {
             for (let f = 0; f <= FRET_COUNT; f++) {
                 if (!fretboardGrid[s] || !fretboardGrid[s][f]) continue;
                 const cell = fretboardGrid[s][f];
-                // Clean up classes and remove old highlights
                 cell.element.classList.remove('reverse-lookup-selected', 'reverse-lookup-muted', 'disabled');
                 const highlights = cell.element.querySelectorAll('.highlight-circle, .scale-highlight');
                 highlights.forEach(h => h.remove());
-    
-                // If "Display as Degrees" is on and a root note is selected
+
                 if (state.displayAsDegrees && rootNoteIndex !== -1) {
                     const degreeName = getDegreeName(cell.noteIndex, rootNoteIndex);
-                    // Display only the degree
                     cell.noteDisplay.innerHTML = formatNoteHTML(degreeName);
                 } else {
-                    // Otherwise, display the note name
                     const noteName = displayNotes[cell.noteIndex];
                     cell.noteDisplay.innerHTML = formatNoteHTML(noteName);
                 }
             }
         }
     }
-    
-    function calculateChord(type, tensions) {
-        let allIntervals = [];
-        let allDegrees = [];
-        const baseChord = type ? CHORD_INTERVALS[type] : { intervals: [0], degrees: ['R'] };
-        allIntervals.push(...(baseChord.intervals || [0]));
-        allDegrees.push(...(baseChord.degrees || ['R']));
-        (tensions || []).forEach(tensionKey => {
-            const tension = CHORD_INTERVALS[tensionKey];
-            if (!tension || !tension.intervals) return;
-            tension.intervals.forEach(interval => {
-                if (!allIntervals.includes(interval)) allIntervals.push(interval);
-            });
-            tension.degrees.forEach(degree => {
-                if (!allDegrees.includes(degree)) allDegrees.push(degree);
-            });
-        });
-        return { intervals: [...new Set(allIntervals)], degrees: [...new Set(allDegrees)] };
+
+    function calculateChord(type) {
+        if (type && CHORD_INTERVALS[type]) {
+            return CHORD_INTERVALS[type];
+        }
+        return { intervals: [0], degrees: ['R'], notation: '' };
     }
 
     function calculateScaleNotes(rootIndex, scaleType) {
@@ -585,10 +554,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function highlightChord(noteMap, rootNoteIndex) {
-         const TENSION_DEGREE_NAMES = ['♭7', '7', '9', '♯9', '11', '13', '6'];
+         const TENSION_DEGREE_NAMES = ['♭7', '7', '9', '♯9', '11', '13', '6', '♭♭7'];
          const noteIndicesToHighlight = Object.keys(noteMap).map(n => parseInt(n));
          const displayNotes = state.notationMode === 'flats' ? NOTES_FLAT : NOTES;
-    
+
          for (let s = 0; s < STRING_COUNT; s++) {
             for (let f = 0; f <= FRET_COUNT; f++) {
                 if (!fretboardGrid[s] || !fretboardGrid[s][f]) continue;
@@ -597,27 +566,27 @@ document.addEventListener('DOMContentLoaded', () => {
                      cell.noteDisplay.innerHTML = '';
                      const highlight = document.createElement('div');
                      highlight.className = 'highlight-circle';
-                     
+
                      let displayText = '';
                      if (state.displayAsDegrees) {
                         displayText = noteMap[cell.noteIndex];
                      } else {
                         displayText = displayNotes[cell.noteIndex];
                      }
-    
+
                      const degreeText = noteMap[cell.noteIndex];
-    
+
                      if (cell.noteIndex === rootNoteIndex) {
                         highlight.classList.add('root');
                         if (state.displayAsDegrees) {
                             displayText = 'R';
                         }
-                     } else if (TENSION_DEGREE_NAMES.some(t => degreeText.includes(t))) {
+                     } else if (TENSION_DEGREE_NAMES.some(t => degreeText && degreeText.includes(t))) {
                         highlight.classList.add('tension');
                      } else {
                         highlight.classList.add('degree');
                      }
-    
+
                      highlight.innerHTML = formatNoteHTML(displayText);
                      cell.noteDisplay.appendChild(highlight);
                 }
@@ -650,40 +619,126 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     }
-    
-    function generateChordName(currentState, useHTML) { // Added useHTML flag
+
+    function generateChordName(currentState, useHTML) {
         if (!currentState.rootNote) return '--';
         let name = currentState.rootNote;
-        
-        let baseNotation = '';
-        if(currentState.chordType) {
-            baseNotation = CHORD_INTERVALS[currentState.chordType]?.notation || '';
-        }
-        
-        const tensionOrder = ['6', 'm6', '7', 'M7', 'm7', '9', 'M9', 'm9', '7b9', '7s9', 'm7b5', 'dim7'];
-        const sortedTensions = (currentState.tensions || []).sort((a, b) => tensionOrder.indexOf(a) - tensionOrder.indexOf(b));
 
-        let tensionNotation = '';
-        sortedTensions.forEach(t => {
-            const notation = CHORD_INTERVALS[t]?.notation;
-            if (notation && !baseNotation.includes(notation.replace(/m/g, ''))) {
-                 tensionNotation += notation;
-            }
-        });
-        
-        if (baseNotation === 'm' && tensionNotation.startsWith('m')) {
-             name += tensionNotation;
-        } else {
-            name += baseNotation + tensionNotation;
+        if (currentState.chordType) {
+            const notation = CHORD_INTERVALS[currentState.chordType]?.notation || '';
+            name += notation;
         }
 
         if (currentState.bassNote && currentState.bassNote !== currentState.rootNote) {
             name += `/${currentState.bassNote}`;
         }
-        
-        return useHTML ? formatNoteHTML(name) : name; // Return formatted or raw string
+
+        return useHTML ? formatNoteHTML(name) : name;
     }
     
+    // --- PIANO KEYBOARD FUNCTIONS (REWRITTEN) ---
+
+    /**
+     * ピアノ鍵盤を生成します。
+     * F3からC6の範囲で、白鍵と黒鍵をフラットな構造でコンテナに直接追加します。
+     * 黒鍵の位置はJavaScriptで動的に計算・設定され、堅牢な描画を実現します。
+     */
+    function createPianoKeyboard() {
+        pianoKeyboardContainer.innerHTML = '';
+        const startMidi = 53; // F3
+        const endMidi = 84;   // C6
+        const noteIsBlackMap = { 1: true, 3: true, 6: true, 8: true, 10: true }; // C=0
+
+        // 1. 表示範囲内の白鍵の数を数える
+        let whiteKeyCount = 0;
+        for (let midi = startMidi; midi <= endMidi; midi++) {
+            if (!noteIsBlackMap[midi % 12]) {
+                whiteKeyCount++;
+            }
+        }
+        const whiteKeyWidth = 100 / whiteKeyCount;
+        const blackKeyWidth = whiteKeyWidth * 0.6; // 黒鍵の幅を白鍵に対する比率で定義
+
+        // 2. 白鍵と黒鍵を生成して配置
+        let whiteKeysPassed = 0;
+        for (let midi = startMidi; midi <= endMidi; midi++) {
+            const noteIndex = midi % 12;
+            const isBlack = noteIsBlackMap[noteIndex];
+            
+            const keyElement = document.createElement('div');
+            keyElement.dataset.midi = midi;
+
+            if (isBlack) {
+                keyElement.className = 'piano-key-black';
+                keyElement.style.width = `${blackKeyWidth}%`;
+                // 黒鍵の位置を、直前の白鍵の終端を基準に計算
+                const leftOffset = (whiteKeysPassed * whiteKeyWidth) - (blackKeyWidth / 2);
+                keyElement.style.left = `${leftOffset}%`;
+                pianoKeyboardContainer.appendChild(keyElement);
+            } else {
+                keyElement.className = 'piano-key-white';
+                keyElement.style.width = `${whiteKeyWidth}%`;
+                pianoKeyboardContainer.appendChild(keyElement);
+                whiteKeysPassed++;
+            }
+        }
+    }
+    
+    /**
+     * 選択されたコードの構成音をピアノ鍵盤上でハイライトします。
+     * MIDIノート番号に基づいて対応する鍵盤要素を探し、クラスを付与します。
+     */
+    function updatePianoHighlight() {
+        // 1. 全てのハイライトをリセット
+        document.querySelectorAll('.piano-key-white.highlighted, .piano-key-black.highlighted').forEach(key => {
+            key.classList.remove('highlighted');
+        });
+
+        // 2. ハイライト対象のコード情報を取得
+        let sourceState = null;
+        if (isReverseLookupMode && identifiedChordState) {
+            sourceState = identifiedChordState;
+        } else if (!isReverseLookupMode && state.rootNote) {
+            sourceState = state;
+        }
+        if (!sourceState) return;
+
+        // 3. コード構成音のMIDIノート番号を計算
+        const currentNotes = sourceState.notationMode === 'flats' ? NOTES_FLAT : NOTES;
+        const rootNoteIndex = currentNotes.indexOf(sourceState.rootNote);
+        if (rootNoteIndex === -1) return;
+
+        const chordData = calculateChord(sourceState.chordType);
+        if (!chordData || !chordData.intervals) return;
+
+        const pianoMaxMidi = 84; // C6
+        
+        // C4オクターブを基準にMIDIノートを計算
+        let baseMidi = 60 + rootNoteIndex; 
+        
+        // コードの最高音が鍵盤の表示範囲を超える場合、全体を1オクターブ下げる
+        const checkMidiNotes = chordData.intervals.map(interval => baseMidi + interval);
+        if (Math.max(...checkMidiNotes) > pianoMaxMidi) {
+            baseMidi -= 12;
+        }
+
+        const midiNotesToHighlight = new Set(
+            chordData.intervals.map(interval => baseMidi + interval)
+        );
+
+        // 4. 対応する鍵盤のDOM要素をハイライト
+        midiNotesToHighlight.forEach(midi => {
+            const key = pianoKeyboardContainer.querySelector(`[data-midi="${midi}"]`);
+            if (key) {
+                key.classList.add('highlighted');
+            }
+        });
+    }
+
+    function triggerPianoUpdate() {
+        setTimeout(updatePianoHighlight, 0);
+    }
+
     // --- DIATONIC FUNCTIONS ---
     function setupDiatonicPanel() {
         const notes = state.notationMode === 'flats' ? NOTES_FLAT : NOTES;
@@ -701,7 +756,7 @@ document.addEventListener('DOMContentLoaded', () => {
         diatonicChordsContainer.innerHTML = '';
         const key = diatonicKeySelector.value;
         const mode = diatonicModeSelector.value;
-        
+
         const currentNotes = state.notationMode === 'flats' ? NOTES_FLAT : NOTES;
         const keyIndex = currentNotes.indexOf(key);
         if (keyIndex === -1) return;
@@ -713,15 +768,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const rootNoteIndex = (keyIndex + interval) % 12;
             const rootNoteName = displayNotes[rootNoteIndex];
             const chordType = pattern.types[i];
-            
+
             const btn = document.createElement('button');
             btn.className = 'diatonic-chord-btn border border-gray-400 bg-gray-100 hover:bg-gray-200 rounded py-2 px-3 text-sm font-semibold text-gray-800';
-            btn.innerHTML = formatNoteHTML(`${rootNoteName}${CHORD_INTERVALS[chordType].notation}`); // Use innerHTML
+            btn.innerHTML = formatNoteHTML(`${rootNoteName}${CHORD_INTERVALS[chordType].notation}`);
             btn.addEventListener('click', () => {
                 if (isReverseLookupMode) toggleReverseLookupMode();
                 state.rootNote = rootNoteName;
                 state.chordType = chordType;
-                state.tensions = [];
                 state.bassNote = null;
                 updateControlsFromState();
                 updateDisplay();
@@ -734,16 +788,16 @@ document.addEventListener('DOMContentLoaded', () => {
     function toggleReverseLookupMode() {
         isReverseLookupMode = !isReverseLookupMode;
         reverseLookupToggle.classList.toggle('active-lookup', isReverseLookupMode);
-        
+
         resetAll();
-        
+
         normalControls.classList.toggle('hidden', isReverseLookupMode);
         reverseLookupControls.classList.toggle('hidden', !isReverseLookupMode);
         saveReverseChordButton.classList.toggle('hidden', !isReverseLookupMode);
         saveChordButton.classList.toggle('hidden', isReverseLookupMode);
 
         if (isReverseLookupMode) {
-            fullChordNameDisplay.innerHTML = "指板を選択"; // Use innerHTML
+            fullChordNameDisplay.innerHTML = "指板を選択";
             fullChordNameDisplay.classList.remove('text-lg', 'text-red-500');
             fullChordNameDisplay.classList.add('text-base', 'text-gray-500');
         }
@@ -769,12 +823,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         identifyChordFromSelection();
+        triggerPianoUpdate();
     }
 
     function identifyChordFromSelection() {
         const uniqueNoteIndexes = [...new Set(selectedNotesForLookup.filter(n => n.status === 'selected').map(n => n.noteIndex))];
         if (uniqueNoteIndexes.length < 2) {
-            fullChordNameDisplay.innerHTML = "音を追加"; // Use innerHTML
+            fullChordNameDisplay.innerHTML = "音を追加";
             fullChordNameDisplay.classList.remove('text-lg', 'text-red-500');
             fullChordNameDisplay.classList.add('text-sm', 'text-gray-500');
             identifiedChordState = null;
@@ -784,13 +839,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const result = findChord(uniqueNoteIndexes);
         if (result) {
-            fullChordNameDisplay.innerHTML = formatNoteHTML(result.name); // Use innerHTML
+            fullChordNameDisplay.innerHTML = formatNoteHTML(result.name);
             fullChordNameDisplay.classList.add('text-lg', 'text-red-500');
             fullChordNameDisplay.classList.remove('text-sm', 'text-gray-500');
             identifiedChordState = result.state;
             saveReverseChordButton.disabled = false;
         } else {
-            fullChordNameDisplay.innerHTML = "不明なコード"; // Use innerHTML
+            fullChordNameDisplay.innerHTML = "不明なコード";
             fullChordNameDisplay.classList.remove('text-lg', 'text-red-500');
             fullChordNameDisplay.classList.add('text-sm', 'text-gray-500');
             identifiedChordState = null;
@@ -800,38 +855,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function findChord(noteIndexes) {
         const CHORD_DEFINITIONS = [
-            { name: 'M9', state: { chordType: 'Maj', tensions: ['M9'] }, intervals: [0, 2, 4, 7, 11] },
-            { name: '9', state: { chordType: 'Maj', tensions: ['9'] }, intervals: [0, 2, 4, 7, 10] },
-            { name: 'm9', state: { chordType: 'min', tensions: ['m9'] }, intervals: [0, 2, 3, 7, 10] },
-            { name: '7(♯9)', state: { chordType: 'Maj', tensions: ['7s9'] }, intervals: [0, 3, 4, 7, 10] },
-            { name: '7(♭9)', state: { chordType: 'Maj', tensions: ['7b9'] }, intervals: [0, 1, 4, 7, 10] },
-            { name: 'M7', state: { chordType: 'Maj', tensions: ['M7'] }, intervals: [0, 4, 7, 11] },
-            { name: '7', state: { chordType: 'Maj', tensions: ['7'] }, intervals: [0, 4, 7, 10] },
-            { name: '6', state: { chordType: 'Maj', tensions: ['6'] }, intervals: [0, 4, 7, 9] },
-            { name: 'm7', state: { chordType: 'min', tensions: ['m7'] }, intervals: [0, 3, 7, 10] }, 
-            { name: 'm6', state: { chordType: 'min', tensions: ['m6'] }, intervals: [0, 3, 7, 9] },
-            { name: 'm7(♭5)', state: { chordType: 'dim', tensions: ['m7b5'] }, intervals: [0, 3, 6, 10] },
-            { name: 'dim7', state: { chordType: 'dim', tensions: ['dim7'] }, intervals: [0, 3, 6, 9] }, 
-            { name: '', state: { chordType: 'Maj', tensions: [] }, intervals: [0, 4, 7] }, 
-            { name: 'm', state: { chordType: 'min', tensions: [] }, intervals: [0, 3, 7] }, 
-            { name: 'dim', state: { chordType: 'dim', tensions: [] }, intervals: [0, 3, 6] }, 
-            { name: 'aug', state: { chordType: 'aug', tensions: [] }, intervals: [0, 4, 8] }, 
-            { name: 'sus2', state: { chordType: 'sus2', tensions: [] }, intervals: [0, 2, 7] }, 
-            { name: 'sus4', state: { chordType: 'sus4', tensions: [] }, intervals: [0, 5, 7] },
+            { key: 'M9', intervals: [0, 4, 7, 11, 14] },
+            { key: '9', intervals: [0, 4, 7, 10, 14] },
+            { key: 'm9', intervals: [0, 3, 7, 10, 14] },
+            { key: '7s9', intervals: [0, 4, 7, 10, 15] },
+            { key: '7b9', intervals: [0, 4, 7, 10, 13] },
+            { key: 'dim7', intervals: [0, 3, 6, 9] },
+            { key: 'm7b5', intervals: [0, 3, 6, 10] },
+            { key: 'M7', intervals: [0, 4, 7, 11] },
+            { key: '7', intervals: [0, 4, 7, 10] },
+            { key: 'm7', intervals: [0, 3, 7, 10] },
+            { key: 'm6', intervals: [0, 3, 7, 9] },
+            { key: '6', intervals: [0, 4, 7, 9] },
+            { key: 'aug', intervals: [0, 4, 8] },
+            { key: 'dim', intervals: [0, 3, 6] },
+            { key: 'min', intervals: [0, 3, 7] },
+            { key: 'Maj', intervals: [0, 4, 7] },
+            { key: 'sus2', intervals: [0, 2, 7] },
+            { key: 'sus4', intervals: [0, 5, 7] },
         ];
-        
+
         const displayNotes = state.notationMode === 'flats' ? NOTES_FLAT : NOTES;
 
         for (const root of noteIndexes) {
             const intervals = noteIndexes.map(note => (note - root + 12) % 12).sort((a, b) => a - b);
-            for (const chord of CHORD_DEFINITIONS) {
-                if (intervals.length === chord.intervals.length && intervals.every((v, i) => v === chord.intervals[i])) {
+
+            for (const chordDef of CHORD_DEFINITIONS) {
+                const comparisonIntervals = [...new Set(chordDef.intervals.map(i => i % 12))].sort((a, b) => a - b);
+
+                if (intervals.length === comparisonIntervals.length && intervals.every((v, i) => v === comparisonIntervals[i])) {
                     const rootNoteName = displayNotes[root];
-                    let chordNotation = chord.name;
+                    const chordInfo = CHORD_INTERVALS[chordDef.key];
                     return {
-                        name: `${rootNoteName}${chordNotation}`,
+                        name: `${rootNoteName}${chordInfo.notation}`,
                         state: {
-                            rootNote: rootNoteName, ...chord.state, notationMode: state.notationMode
+                            rootNote: rootNoteName,
+                            chordType: chordDef.key,
+                            notationMode: state.notationMode
                         }
                     };
                 }
@@ -843,7 +903,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function saveReverseChord() {
         if (identifiedChordState) {
             const finalState = { ...state, ...identifiedChordState, bassNote: null };
-            const chordName = generateChordName(finalState, false); // Raw name
+            const chordName = generateChordName(finalState, false);
             const newSavedChord = {
                 id: Date.now().toString(),
                 name: chordName,
