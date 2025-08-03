@@ -50,6 +50,22 @@ body {
 .tension { background-color: #facc15; color: #1f2937; }
 .bass { background-color: #22c55e; }
 
+/* --- [NEW] Style for outlining other root notes in reverse lookup mode --- */
+.root-outline {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 9999px;
+    border: 2px solid #ef4444;
+    color: #ef4444;
+    font-weight: bold;
+    box-sizing: border-box;
+    z-index: 9;
+}
+
+
 .scale-highlight {
     position: absolute;
     width: 18px;
@@ -215,4 +231,39 @@ button:disabled:hover {
 .piano-key-black.highlighted {
     background: linear-gradient(to top, #3b82f6, #60a5fa);
     border-color: #60a5fa;
+}
+
+/* --- [NEW] Mute Button and Muted String Styles --- */
+.mute-btn {
+    color: #d1d5db; /* very light grey */
+    background: transparent;
+    border: none;
+    font-size: 1.25rem;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    transition: color 0.2s ease-in-out;
+}
+.mute-btn:hover {
+    color: #9ca3af; /* medium grey */
+}
+.mute-btn.active {
+    color: #374151; /* dark grey */
+}
+
+.string-row.muted {
+    opacity: 0.5;
+    background-color: #f3f4f6;
+}
+.string-row.muted .string {
+    background-color: #d1d5db;
+}
+.string-row.muted .highlight-circle,
+.string-row.muted .scale-highlight,
+.string-row.muted .root-outline {
+    display: none;
+}
+.string-row.muted .fret:hover {
+    background-color: inherit; /* disable hover on muted frets */
 }

@@ -12,7 +12,7 @@
 <body class="bg-gray-100 flex flex-col items-center justify-start min-h-screen p-2 sm:p-4">
 
     <div class="w-full max-w-[1920px] mx-auto">
-        <div id="fretboard-container" class="relative fretboard-bg rounded-lg p-2 sm:p-6 mb-3 overflow-hidden"></div>
+        <div id="fretboard-container" class="relative fretboard-bg rounded-lg p-2 pl-8 sm:p-6 sm:pl-10 mb-3 overflow-hidden"></div>
 
         <div id="controls-container" class="bg-white p-2 rounded-lg shadow-md mb-3">
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -28,40 +28,51 @@
                     </div>
                 </div>
                 
-                <div id="normal-controls" class="contents">
-                    <div class="lg:col-span-2">
-                        <div id="combined-chord-selector" class="grid grid-cols-5 md:grid-cols-6 gap-1"></div>
-                    </div>
-                    <div class="space-y-2">
-                         <div class="flex items-center justify-between">
-                             <span class="font-medium text-xs text-gray-600">メジャーペンタ</span>
-                             <label class="toggle-switch"><input type="checkbox" id="major-penta-toggle"><span class="slider"></span></label>
-                         </div>
-                         <div class="flex items-center justify-between">
-                             <span class="font-medium text-xs text-gray-600">マイナーペンタ</span>
-                             <label class="toggle-switch"><input type="checkbox" id="minor-penta-toggle"><span class="slider"></span></label>
-                         </div>
-                         <div class="flex items-center justify-between">
-                            <span id="degree-toggle-label" class="font-medium text-xs text-gray-600">度数で表示</span>
-                            <label class="toggle-switch"><input type="checkbox" id="degree-display-toggle" disabled><span class="slider"></span></label>
+                <div id="chord-selector-container" class="lg:col-span-2">
+                    <div id="combined-chord-selector" class="grid grid-cols-5 md:grid-cols-6 gap-1"></div>
+                </div>
+
+                <div class="space-y-2">
+                    <div id="normal-mode-toggles">
+                        <div class="flex items-center justify-between">
+                            <span class="font-medium text-xs text-gray-600">メジャーペンタ</span>
+                            <label class="toggle-switch"><input type="checkbox" id="major-penta-toggle"><span class="slider"></span></label>
                         </div>
                         <div class="flex items-center justify-between">
-                            <span class="font-medium text-xs text-gray-600">♭表記に切替</span>
-                            <label class="toggle-switch"><input type="checkbox" id="notation-toggle"><span class="slider"></span></label>
+                            <span class="font-medium text-xs text-gray-600">マイナーペンタ</span>
+                            <label class="toggle-switch"><input type="checkbox" id="minor-penta-toggle"><span class="slider"></span></label>
                         </div>
-                         <div class="flex items-center justify-between pt-1 border-t mt-1">
-                            <label for="fret-count-input" class="font-medium text-xs text-gray-600">フレット数</label>
-                            <input type="number" id="fret-count-input" value="15" min="12" max="24" class="w-16 border border-gray-300 rounded-md p-0.5 text-center text-xs">
-                        </div>
-                        <div class="flex items-center justify-between pt-1 border-t mt-1">
-                            <label for="bass-note-selector" class="font-medium text-xs text-gray-600">ベースノート</label>
-                            <select id="bass-note-selector" class="w-24 border border-gray-300 rounded-md p-0.5 text-xs bg-white"></select>
+                        <div id="degree-toggle-wrapper" class="flex items-center justify-between">
+                           <span id="degree-toggle-label" class="font-medium text-xs text-gray-600">度数で表示</span>
+                           <label class="toggle-switch"><input type="checkbox" id="degree-display-toggle" disabled><span class="slider"></span></label>
                         </div>
                     </div>
+
+                    <div id="settings-toggles">
+                       <div id="reverse-degree-toggle-wrapper" class="hidden flex items-center justify-between">
+                            <span id="reverse-degree-toggle-label" class="font-medium text-xs text-gray-600">音名で表示</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="reverse-degree-toggle" disabled>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                       <div class="flex items-center justify-between">
+                           <span class="font-medium text-xs text-gray-600">♯表記に切替</span>
+                           <label class="toggle-switch"><input type="checkbox" id="notation-toggle"><span class="slider"></span></label>
+                       </div>
+                    </div>
+                    
+                    <div id="normal-mode-selectors" class="space-y-2">
+                        <div class="flex items-center justify-between pt-1 border-t mt-1">
+                           <label for="fret-count-input" class="font-medium text-xs text-gray-600">フレット数</label>
+                           <input type="number" id="fret-count-input" value="15" min="12" max="24" class="w-16 border border-gray-300 rounded-md p-0.5 text-center text-xs">
+                       </div>
+                       <div class="flex items-center justify-between pt-1 border-t mt-1">
+                           <label for="bass-note-selector" class="font-medium text-xs text-gray-600">ベースノート</label>
+                           <select id="bass-note-selector" class="w-24 border border-gray-300 rounded-md p-0.5 text-xs bg-white"></select>
+                       </div>
+                    </div>
                 </div>
-            </div>
-            <div id="reverse-lookup-controls" class="hidden mt-3">
-                 <p class="text-sm text-center text-gray-600">フレットボード上の音をクリックしてコードを検索します。</p>
             </div>
         </div>
         
