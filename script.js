@@ -61,11 +61,11 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         degrees: {
             major: ['I', 'IIm', 'IIIm', 'IV', 'V', 'VIm', 'VIIm(♭5)'],
-            minor: ['im', 'iim(♭5)', 'III', 'ivm', 'vm', 'VI', 'VII']
+            minor: ['Im', 'IIm(♭5)', '♭III', 'IVm', 'Vm', '♭VI', '♭VII']
         },
         functions: {
             major: ['tonic', 'subdominant', 'tonic', 'subdominant', 'dominant', 'tonic', 'dominant'],
-            minor: ['tonic', 'subdominant', 'tonic', 'subdominant', 'dominant', 'tonic', 'dominant']
+            minor: ['tonic', 'subdominant', 'tonic', 'subdominant', 'dominant', 'subdominant', 'dominant']
         }
     };
 
@@ -86,16 +86,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const diatonicChordsContainer = document.getElementById('diatonic-chords-container');
     const reverseLookupToggle = document.getElementById('reverse-lookup-toggle');
     const pianoKeyboardContainer = document.getElementById('piano-keyboard-container');
-
     const chordSelectorContainer = document.getElementById('chord-selector-container');
     const normalModeToggles = document.getElementById('normal-mode-toggles');
     const normalModeSelectors = document.getElementById('normal-mode-selectors');
-    
     const degreeToggleWrapper = document.getElementById('degree-toggle-wrapper');
     const reverseDegreeToggleWrapper = document.getElementById('reverse-degree-toggle-wrapper');
     const reverseDegreeToggle = document.getElementById('reverse-degree-toggle');
     const reverseDegreeToggleLabel = document.getElementById('reverse-degree-toggle-label');
-
 
     let fretboardGrid = [];
 
@@ -105,7 +102,8 @@ document.addEventListener('DOMContentLoaded', () => {
         showMajorPenta: false, showMinorPenta: false, displayAsDegrees: false,
         notationMode: 'flats',
         diatonicMode: 'major',
-        mutedStrings: Array(STRING_COUNT).fill(false) // [NEW] Add state for muted strings
+        mutedStrings: Array(STRING_COUNT).fill(false),
+        isAllKeysViewActive: false
     };
     let isReverseLookupMode = false;
     let selectedNotesForLookup = [];
@@ -130,24 +128,21 @@ document.addEventListener('DOMContentLoaded', () => {
         return name.replace(/([♯♭]|\(b5\)|\(♯9\)|\(♭9\)|b5)/g, '<span class="accidental">$1</span>');
     }
     
-    // [MODIFIED] Create Fretboard with Mute Buttons
     function createFretboard() {
         fretboardContainer.innerHTML = '';
         fretboardGrid = [];
         const scrollWrapper = document.createElement('div');
         scrollWrapper.className = 'fretboard-scroll-wrapper overflow-x-auto pb-2';
         const board = document.createElement('div');
-        board.className = 'grid gap-y-1 min-w-[750px]'; // Increased min-width for mute button
+        board.className = 'grid gap-y-1 min-w-[750px]';
         board.style.gridTemplateRows = `repeat(${STRING_COUNT}, 24px)`;
 
         for (let s = 0; s < STRING_COUNT; s++) {
             const stringRow = document.createElement('div');
-            stringRow.className = 'string-row grid relative'; // Added class for easier targeting
-            // Add a column for the mute button (30px) + fret columns
+            stringRow.className = 'string-row grid relative';
             stringRow.style.gridTemplateColumns = `30px repeat(${FRET_COUNT + 1}, 1fr)`;
             fretboardGrid[s] = [];
 
-            // [NEW] Create and add the mute button cell
             const muteBtnCell = document.createElement('div');
             muteBtnCell.className = 'flex items-center justify-center';
             const muteBtn = document.createElement('button');
@@ -171,15 +166,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 fretCell.addEventListener('click', () => handleFretClick(f, s));
             }
 
-            // [MODIFIED] Store references to the row and button for easy access
             fretboardGrid[s].rowElement = stringRow;
             fretboardGrid[s].muteButton = muteBtn;
 
             const stringLine = document.createElement('div');
             stringLine.className = 'string absolute top-1/2 -translate-y-1/2';
             stringLine.style.height = `${s * 0.4 + 1}px`;
-            // [MODIFIED] Adjust string line position due to mute button column
-            const fretWidthPercentage = 100 / (FRET_COUNT + 2); // Total columns now include the mute button
+            const fretWidthPercentage = 100 / (FRET_COUNT + 2);
             stringLine.style.left = `calc(30px + ${fretWidthPercentage / 2}%)`; 
             stringLine.style.width = `calc(100% - 30px - ${fretWidthPercentage}%)`;
             stringRow.appendChild(stringLine);
@@ -187,11 +180,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         scrollWrapper.appendChild(board);
 
-        // [MODIFIED] Fret Number Row
         const fretNumberRow = document.createElement('div');
-        fretNumberRow.className = 'grid mt-2 min-w-[750px]'; // Increased min-width
-        fretNumberRow.style.gridTemplateColumns = `30px repeat(${FRET_COUNT + 1}, 1fr)`; // Add empty space for alignment
-        fretNumberRow.appendChild(document.createElement('div')); // Add empty cell for the mute button column
+        fretNumberRow.className = 'grid mt-2 min-w-[750px]';
+        fretNumberRow.style.gridTemplateColumns = `30px repeat(${FRET_COUNT + 1}, 1fr)`;
+        fretNumberRow.appendChild(document.createElement('div'));
 
         const MARKER_FRETS = [3, 5, 7, 9, 15, 17, 19];
         const DOUBLE_MARKER_FRET = 12;
@@ -226,7 +218,6 @@ document.addEventListener('DOMContentLoaded', () => {
         scrollWrapper.appendChild(fretNumberRow);
         fretboardContainer.appendChild(scrollWrapper);
     }
-
 
     function createChordButtons() {
         const rootNotes = state.notationMode === 'flats' ? NOTES_FLAT : NOTES;
@@ -286,14 +277,26 @@ document.addEventListener('DOMContentLoaded', () => {
             createFretboard();
             updateDisplay();
         });
-        diatonicKeySelector.addEventListener('change', renderDiatonicChords);
-        diatonicModeSelectorContainer.addEventListener('click', (e) => {
-            const btn = e.target.closest('.diatonic-mode-btn');
-            if(btn && btn.dataset.mode) {
-                state.diatonicMode = btn.dataset.mode;
+        diatonicKeySelector.addEventListener('change', () => {
+            if (!state.isAllKeysViewActive) {
                 renderDiatonicChords();
             }
         });
+        
+        diatonicModeSelectorContainer.addEventListener('click', (e) => {
+            const btn = e.target.closest('.diatonic-mode-btn');
+            if(btn && btn.dataset.mode) {
+                const newMode = btn.dataset.mode;
+                if (state.diatonicMode === newMode) {
+                    state.isAllKeysViewActive = !state.isAllKeysViewActive;
+                } else {
+                    state.diatonicMode = newMode;
+                    state.isAllKeysViewActive = false;
+                }
+                renderDiatonicChords();
+            }
+        });
+
         reverseLookupToggle.addEventListener('click', toggleReverseLookupMode);
         reverseDegreeToggle.addEventListener('change', (e) => {
             if (reverseLookupRoot) {
@@ -303,9 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // [MODIFIED] Handle Fret Click - now considers muted strings
     function handleFretClick(fret, string) {
-        // If the string is muted, unmute it first, then proceed.
         if (state.mutedStrings[string]) {
             state.mutedStrings[string] = false;
         }
@@ -366,16 +367,16 @@ document.addEventListener('DOMContentLoaded', () => {
         updateDisplay();
     }
 
-    // [MODIFIED] Reset All - also resets muted strings
     function resetAll() {
         const currentNotationMode = state.notationMode;
-        const currentDiatonicMode = state.diatonicMode;
         
         state = { 
             rootNote: null, chordType: null, bassNote: null,
             showMajorPenta: false, showMinorPenta: false, displayAsDegrees: false,
-            notationMode: currentNotationMode, diatonicMode: currentDiatonicMode,
-            mutedStrings: Array(STRING_COUNT).fill(false) // Also reset muted strings
+            notationMode: currentNotationMode, 
+            diatonicMode: 'major',
+            mutedStrings: Array(STRING_COUNT).fill(false),
+            isAllKeysViewActive: false
         };
 
         selectedNotesForLookup = [];
@@ -389,6 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateControlsFromState();
             updateDisplay();
         }
+        setupDiatonicPanel();
         triggerPianoUpdate();
     }
 
@@ -431,12 +433,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let rootNoteIndex = currentNotes.indexOf(state.rootNote);
         if (rootNoteIndex === -1) {
             const fallbackNotes = state.notationMode === 'flats' ? NOTES : NOTES_FLAT;
-            const fallbackIndex = fallbackNotes.indexOf(state.rootNote);
-            if(fallbackIndex !== -1) {
-                rootNoteIndex = fallbackIndex;
-            } else {
-                return;
-            }
+            rootNoteIndex = fallbackNotes.indexOf(state.rootNote);
+            if (rootNoteIndex === -1) return;
         }
 
         if (state.showMajorPenta) highlightScale(calculateScaleNotes(rootNoteIndex, 'majorPentatonic'), 'major-penta');
@@ -465,7 +463,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getDegreeName(noteIndex, rootIndex) { return DEGREE_NAMES[(noteIndex - rootIndex + 12) % 12]; }
 
-    // [MODIFIED] Clear and Reset Board - applies mute styling
     function clearAndResetBoard() {
         const displayNotes = state.notationMode === 'flats' ? NOTES_FLAT : NOTES;
         
@@ -487,7 +484,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         for (let s = 0; s < STRING_COUNT; s++) {
-            // Apply muted styling to the whole row
             if (fretboardGrid[s] && fretboardGrid[s].rowElement) {
                 const isMuted = state.mutedStrings[s];
                 fretboardGrid[s].rowElement.classList.toggle('muted', isMuted);
@@ -513,7 +509,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-
     function calculateChord(type) {
         if (type && CHORD_INTERVALS[type]) {
             return CHORD_INTERVALS[type];
@@ -529,7 +524,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function highlightScale(noteIndices, className) {
         for (let s = 0; s < STRING_COUNT; s++) {
-            if(state.mutedStrings[s]) continue; // Don't highlight muted strings
+            if(state.mutedStrings[s]) continue;
             for (let f = 0; f <= FRET_COUNT; f++) {
                 if (!fretboardGrid[s] || !fretboardGrid[s][f]) continue;
                 const cell = fretboardGrid[s][f];
@@ -548,7 +543,7 @@ document.addEventListener('DOMContentLoaded', () => {
          const displayNotes = state.notationMode === 'flats' ? NOTES_FLAT : NOTES;
 
          for (let s = 0; s < STRING_COUNT; s++) {
-            if(state.mutedStrings[s]) continue; // Don't highlight muted strings
+            if(state.mutedStrings[s]) continue;
             for (let f = 0; f <= FRET_COUNT; f++) {
                 if (!fretboardGrid[s] || !fretboardGrid[s][f]) continue;
                 const cell = fretboardGrid[s][f];
@@ -586,7 +581,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function highlightBassNote(bassNoteIndex) {
         for (let s = 0; s < STRING_COUNT; s++) {
-            if(state.mutedStrings[s]) continue; // Don't highlight muted strings
+            if(state.mutedStrings[s]) continue;
             for (let f = 0; f <= FRET_COUNT; f++) {
                 if (!fretboardGrid[s] || !fretboardGrid[s][f]) continue;
                 const cell = fretboardGrid[s][f];
@@ -627,12 +622,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return useHTML ? formatNoteHTML(name) : name;
     }
     
-    // --- PIANO KEYBOARD FUNCTIONS ---
     function createPianoKeyboard() {
         pianoKeyboardContainer.innerHTML = '';
-        const startMidi = 53; // F3
-        const endMidi = 84;   // C6
-        const noteIsBlackMap = { 1: true, 3: true, 6: true, 8: true, 10: true }; // C=0
+        const startMidi = 53;
+        const endMidi = 84;
+        const noteIsBlackMap = { 1: true, 3: true, 6: true, 8: true, 10: true };
         let whiteKeyCount = 0;
         for (let midi = startMidi; midi <= endMidi; midi++) {
             if (!noteIsBlackMap[midi % 12]) {
@@ -682,7 +676,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const chordData = calculateChord(sourceState.chordType);
         if (!chordData || !chordData.intervals) return;
 
-        const pianoMaxMidi = 84; // C6
+        const pianoMaxMidi = 84;
         let baseMidi = 60 + rootNoteIndex; 
         
         const checkMidiNotes = chordData.intervals.map(interval => baseMidi + interval);
@@ -707,6 +701,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- DIATONIC FUNCTIONS ---
+
     function setupDiatonicPanel() {
         const notes = state.notationMode === 'flats' ? NOTES_FLAT : NOTES;
         let currentKey = diatonicKeySelector.value;
@@ -740,68 +735,126 @@ document.addEventListener('DOMContentLoaded', () => {
         diatonicModeSelectorContainer.querySelectorAll('.diatonic-mode-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.mode === state.diatonicMode);
         });
+        diatonicKeySelector.disabled = state.isAllKeysViewActive;
 
         diatonicChordsContainer.innerHTML = '';
+
+        if (state.isAllKeysViewActive) {
+            renderAllKeysView();
+        } else {
+            renderSingleKeyView();
+        }
+    }
+
+    function renderSingleKeyView() {
+        diatonicChordsContainer.className = 'flex flex-wrap gap-1'; 
         const key = diatonicKeySelector.value;
         const mode = state.diatonicMode;
 
         if (mode === 'major') {
             const chords = DIATONIC_CHORDS_MAJOR_TABLE[key];
             if (!chords) return;
-
             const degreeNames = DIATONIC_INFO.degrees.major;
             const functions = DIATONIC_INFO.functions.major;
-
             chords.forEach((chordName, i) => {
-                const chordLabel = document.createElement('div');
-                const chordFunction = functions[i];
-                chordLabel.className = `diatonic-chord-label diatonic-label-${chordFunction}`;
-
-                const degreeSpan = document.createElement('span');
-                degreeSpan.className = 'diatonic-degree-roman';
-                degreeSpan.innerHTML = formatNoteHTML(degreeNames[i]);
-                chordLabel.appendChild(degreeSpan);
-
-                const chordNameSpan = document.createElement('span');
-                chordNameSpan.innerHTML = formatNoteHTML(chordName);
-                chordLabel.appendChild(chordNameSpan);
-                
-                diatonicChordsContainer.appendChild(chordLabel);
+                diatonicChordsContainer.appendChild(
+                    createDiatonicChordLabel(chordName, degreeNames[i], functions[i])
+                );
             });
-
-        } else { // 'minor' mode
+        } else { // minor
             const currentNotes = state.notationMode === 'flats' ? NOTES_FLAT : NOTES;
             const keyIndex = currentNotes.indexOf(key);
             if (keyIndex === -1) return;
-
             const scaleIntervals = DIATONIC_INFO.intervals.minor;
             const chordTypes = DIATONIC_INFO.types_7th.minor;
             const degreeNames = DIATONIC_INFO.degrees.minor;
             const functions = DIATONIC_INFO.functions.minor;
-
             scaleIntervals.forEach((interval, i) => {
                 const rootNoteIndex = (keyIndex + interval) % 12;
                 const rootNoteName = currentNotes[rootNoteIndex];
                 const chordType = chordTypes[i];
-                
-                const chordLabel = document.createElement('div');
-                const chordFunction = functions[i];
-                chordLabel.className = `diatonic-chord-label diatonic-label-${chordFunction}`;
-
-                const degreeSpan = document.createElement('span');
-                degreeSpan.className = 'diatonic-degree-roman';
-                degreeSpan.innerHTML = formatNoteHTML(degreeNames[i].replace('(b5)','(♭5)'));
-                chordLabel.appendChild(degreeSpan);
-
-                const chordNameSpan = document.createElement('span');
-                chordNameSpan.innerHTML = formatNoteHTML(`${rootNoteName}${CHORD_INTERVALS[chordType].notation}`);
-                chordLabel.appendChild(chordNameSpan);
-                
-                diatonicChordsContainer.appendChild(chordLabel);
+                const chordName = `${rootNoteName}${CHORD_INTERVALS[chordType].notation}`;
+                diatonicChordsContainer.appendChild(
+                    createDiatonicChordLabel(chordName, degreeNames[i], functions[i])
+                );
             });
         }
     }
 
+    function renderAllKeysView() {
+        diatonicChordsContainer.className = 'diatonic-all-view-grid';
+        const mode = state.diatonicMode;
+        const currentNotes = state.notationMode === 'flats' ? NOTES_FLAT : NOTES;
+        const allKeysInOrder = state.notationMode === 'flats' 
+            ? ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'G♭', 'G', 'A♭', 'A', 'B♭', 'B'] 
+            : ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
+
+        diatonicChordsContainer.appendChild(document.createElement('div'));
+        const degreeNames = DIATONIC_INFO.degrees[mode];
+        degreeNames.forEach(degree => {
+            const headerCell = document.createElement('div');
+            headerCell.className = 'diatonic-header-cell';
+            headerCell.innerHTML = formatNoteHTML(degree);
+            diatonicChordsContainer.appendChild(headerCell);
+        });
+
+        allKeysInOrder.forEach(key => {
+            const keyCell = document.createElement('div');
+            keyCell.className = 'diatonic-key-name-cell';
+            keyCell.innerHTML = formatNoteHTML(key);
+            diatonicChordsContainer.appendChild(keyCell);
+
+            const functions = DIATONIC_INFO.functions[mode];
+            if (mode === 'major') {
+                const chords = DIATONIC_CHORDS_MAJOR_TABLE[key];
+                if (!chords) return;
+                chords.forEach((chordName, i) => {
+                    diatonicChordsContainer.appendChild(
+                        createDiatonicChordLabel(chordName, null, functions[i])
+                    );
+                });
+            } else { // minor
+                const keyIndex = currentNotes.indexOf(key);
+                if (keyIndex === -1) return;
+                const scaleIntervals = DIATONIC_INFO.intervals.minor;
+                const chordTypes = DIATONIC_INFO.types_7th.minor;
+                scaleIntervals.forEach((interval, i) => {
+                    const rootNoteIndex = (keyIndex + interval) % 12;
+                    const rootNoteName = currentNotes[rootNoteIndex];
+                    const chordType = chordTypes[i];
+                    const chordName = `${rootNoteName}${CHORD_INTERVALS[chordType].notation}`;
+                    diatonicChordsContainer.appendChild(
+                        createDiatonicChordLabel(chordName, null, functions[i])
+                    );
+                });
+            }
+        });
+    }
+
+    function createDiatonicChordLabel(chordName, degreeName, chordFunction) {
+        const chordLabel = document.createElement('div');
+        chordLabel.className = `diatonic-chord-label diatonic-label-${chordFunction}`;
+        
+        if (degreeName) {
+            const degreeSpan = document.createElement('span');
+            degreeSpan.className = 'diatonic-degree-roman';
+            degreeSpan.innerHTML = formatNoteHTML(degreeName.replace('(b5)','(♭5)'));
+            chordLabel.appendChild(degreeSpan);
+        } else {
+            chordLabel.style.justifyContent = 'center';
+            chordLabel.style.fontSize = '0.75rem';
+        }
+
+        const chordNameSpan = document.createElement('span');
+        
+        // [変更] (b5)や(♭5)の前に改行可能なゼロ幅スペースを挿入し、はみ出しを防ぐ
+        const finalChordName = chordName.replace(/(\(b5\)|\(♭5\))/g, '\u200B$1');
+
+        chordNameSpan.innerHTML = formatNoteHTML(finalChordName);
+        chordLabel.appendChild(chordNameSpan);
+        
+        return chordLabel;
+    }
 
     // --- REVERSE LOOKUP FUNCTIONS ---
     function toggleReverseLookupMode() {
@@ -818,16 +871,11 @@ document.addEventListener('DOMContentLoaded', () => {
         resetAll(); 
     }
     
-    // [NEW] Function to handle string muting
     function toggleMuteString(stringIndex) {
         state.mutedStrings[stringIndex] = !state.mutedStrings[stringIndex];
-
-        // If a string is muted in reverse lookup mode, remove its selected notes
         if (state.mutedStrings[stringIndex] && isReverseLookupMode) {
             selectedNotesForLookup = selectedNotesForLookup.filter(note => note.string !== stringIndex);
         }
-
-        // Update the display based on the current mode
         if (isReverseLookupMode) {
             updateReverseLookupFretboard();
         } else {
@@ -839,7 +887,6 @@ document.addEventListener('DOMContentLoaded', () => {
         clearAndResetBoard();
         
         selectedNotesForLookup.forEach(note => {
-            // Do not show selection on muted strings
             if (state.mutedStrings[note.string]) return;
             const cell = fretboardGrid[note.string][note.fret];
             cell.element.classList.add('reverse-lookup-selected');
@@ -847,7 +894,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (reverseLookupRoot) {
             for (let s = 0; s < STRING_COUNT; s++) {
-                // Do not show root highlights on muted strings
                 if (state.mutedStrings[s]) continue;
                 for (let f = 0; f <= FRET_COUNT; f++) {
                     const cell = fretboardGrid[s][f];
@@ -881,7 +927,6 @@ document.addEventListener('DOMContentLoaded', () => {
         triggerPianoUpdate();
     }
     
-
     function identifyChordFromSelection() {
         const uniqueNoteIndexes = [...new Set(selectedNotesForLookup.map(n => n.noteIndex))];
         if (uniqueNoteIndexes.length < 2) {

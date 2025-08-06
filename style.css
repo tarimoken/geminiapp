@@ -50,7 +50,6 @@ body {
 .tension { background-color: #facc15; color: #1f2937; }
 .bass { background-color: #22c55e; }
 
-/* --- [NEW] Style for outlining other root notes in reverse lookup mode --- */
 .root-outline {
     display: flex;
     justify-content: center;
@@ -98,21 +97,30 @@ body {
     box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
 }
 
-/* Diatonic Chord New Styles */
+/* Diatonic Chord New Styles [変更] */
 .diatonic-chord-label {
     position: relative;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    width: 60px;
-    height: 42px;
-    border-radius: 6px;
+    width: 42px;
+    min-height: 34px; /* [変更] 高さを最小値として設定 */
+    height: auto;       /* [追加] 高さを自動調整に */
+    padding: 2px 0;     /* [追加] 上下の余白を調整 */
+    box-sizing: border-box; /* [追加] paddingをサイズ計算に含める */
+    border-radius: 4px;
     font-weight: 600;
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     cursor: default;
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
+/* [追加] 折り返し時の行間を詰める */
+.diatonic-chord-label span:last-of-type {
+    line-height: 1.1;
+    text-align: center;
+}
+
 .diatonic-label-tonic {
     background-color: #e0f2f1;
     border: 1px solid #b2dfdb;
@@ -129,7 +137,7 @@ body {
     color: #d32f2f;
 }
 .diatonic-degree-roman {
-    font-size: 0.65rem;
+    font-size: 0.55rem;
     font-weight: 500;
     color: inherit;
     opacity: 0.8;
@@ -200,7 +208,7 @@ button:disabled:hover {
     border: 1px solid #9ca3af;
     border-radius: 4px;
     background: #1f2937;
-    position: relative; /* For absolute positioning of black keys */
+    position: relative;
 }
 
 .piano-key-white {
@@ -233,9 +241,9 @@ button:disabled:hover {
     border-color: #60a5fa;
 }
 
-/* --- [NEW] Mute Button and Muted String Styles --- */
+/* --- Mute Button and Muted String Styles --- */
 .mute-btn {
-    color: #d1d5db; /* very light grey */
+    color: #d1d5db;
     background: transparent;
     border: none;
     font-size: 1.25rem;
@@ -246,10 +254,10 @@ button:disabled:hover {
     transition: color 0.2s ease-in-out;
 }
 .mute-btn:hover {
-    color: #9ca3af; /* medium grey */
+    color: #9ca3af;
 }
 .mute-btn.active {
-    color: #374151; /* dark grey */
+    color: #374151;
 }
 
 .string-row.muted {
@@ -265,5 +273,35 @@ button:disabled:hover {
     display: none;
 }
 .string-row.muted .fret:hover {
-    background-color: inherit; /* disable hover on muted frets */
+    background-color: inherit;
+}
+
+/* --- ダイアトニックコード一覧表示用のスタイル --- */
+.diatonic-all-view-grid {
+    display: inline-grid;
+    grid-template-columns: 40px repeat(7, minmax(0, 1fr));
+    align-items: stretch; 
+    gap: 3px;
+}
+
+.diatonic-header-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #4b5563;
+    padding: 4px;
+}
+
+.diatonic-key-name-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.75rem;
+    color: #1f2937;
+    background-color: #f3f4f6;
+    border-radius: 4px;
 }
