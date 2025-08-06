@@ -97,7 +97,6 @@ body {
     box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
 }
 
-/* Diatonic Chord New Styles [変更] */
 .diatonic-chord-label {
     position: relative;
     display: flex;
@@ -105,17 +104,17 @@ body {
     justify-content: center;
     align-items: center;
     width: 42px;
-    min-height: 34px; /* [変更] 高さを最小値として設定 */
-    height: auto;       /* [追加] 高さを自動調整に */
-    padding: 2px 0;     /* [追加] 上下の余白を調整 */
-    box-sizing: border-box; /* [追加] paddingをサイズ計算に含める */
+    min-height: 34px;
+    height: auto;
+    padding: 2px 0;
+    box-sizing: border-box;
     border-radius: 4px;
     font-weight: 600;
     font-size: 0.7rem;
     cursor: default;
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
-/* [追加] 折り返し時の行間を詰める */
+
 .diatonic-chord-label span:last-of-type {
     line-height: 1.1;
     text-align: center;
@@ -201,7 +200,6 @@ button:disabled:hover {
     border-color: #16a34a;
 }
 
-/* ### Piano Keyboard Styles (Rewritten) ### */
 #piano-keyboard-container {
     display: flex;
     height: 70px;
@@ -241,7 +239,6 @@ button:disabled:hover {
     border-color: #60a5fa;
 }
 
-/* --- Mute Button and Muted String Styles --- */
 .mute-btn {
     color: #d1d5db;
     background: transparent;
@@ -276,7 +273,6 @@ button:disabled:hover {
     background-color: inherit;
 }
 
-/* --- ダイアトニックコード一覧表示用のスタイル --- */
 .diatonic-all-view-grid {
     display: inline-grid;
     grid-template-columns: 40px repeat(7, minmax(0, 1fr));
@@ -304,4 +300,11 @@ button:disabled:hover {
     color: #1f2937;
     background-color: #f3f4f6;
     border-radius: 4px;
+    transition: background-color 0.2s; /* [追加] ホバーエフェクト用のトランジション */
+    cursor: pointer; /* [追加] クリック可能であることを示すカーソル */
+}
+
+/* [追加] キー名セルのホバーエフェクト */
+.diatonic-key-name-cell:hover {
+    background-color: #e5e7eb;
 }

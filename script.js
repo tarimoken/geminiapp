@@ -247,6 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // [変更] イベントリスナーの管理方法を更新
     function addEventListeners() {
         document.getElementById('controls-container').addEventListener('click', (e) => {
             const btn = e.target.closest('.control-btn');
@@ -296,6 +297,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderDiatonicChords();
             }
         });
+
+        // --- ここからが新機能（イベントデリゲーション） ---
+        // ダイアトニックコードのコンテナに1つだけイベントリスナーを設定
+        diatonicChordsContainer.addEventListener('click', (e) => {
+            // クリックされた要素がキー名セルかを確認
+            const keyCell = e.target.closest('.diatonic-key-name-cell');
+
+            // キー名セルであり、かつ全キー表示モードの時だけ処理を実行
+            if (keyCell && diatonicChordsContainer.classList.contains('diatonic-all-view-grid')) {
+                const key = keyCell.dataset.key; // data-key属性からキー名を取得
+                if (key) {
+                    state.isAllKeysViewActive = false;
+                    diatonicKeySelector.value = key;
+                    renderDiatonicChords();
+                }
+            }
+        });
+        // --- 新機能ここまで ---
 
         reverseLookupToggle.addEventListener('click', toggleReverseLookupMode);
         reverseDegreeToggle.addEventListener('change', (e) => {
@@ -781,6 +800,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // [変更] この関数内のイベントリスナーを削除
     function renderAllKeysView() {
         diatonicChordsContainer.className = 'diatonic-all-view-grid';
         const mode = state.diatonicMode;
@@ -801,7 +821,15 @@ document.addEventListener('DOMContentLoaded', () => {
         allKeysInOrder.forEach(key => {
             const keyCell = document.createElement('div');
             keyCell.className = 'diatonic-key-name-cell';
-            keyCell.innerHTML = formatNoteHTML(key);
+
+            // data-key属性に生のキー名を保存
+            keyCell.dataset.key = key;
+
+            const keyDisplayName = (mode === 'minor') ? `${key}m` : key;
+            keyCell.innerHTML = formatNoteHTML(keyDisplayName);
+            
+            // この場所でのイベントリスナー追加は削除
+            
             diatonicChordsContainer.appendChild(keyCell);
 
             const functions = DIATONIC_INFO.functions[mode];
@@ -847,7 +875,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const chordNameSpan = document.createElement('span');
         
-        // [変更] (b5)や(♭5)の前に改行可能なゼロ幅スペースを挿入し、はみ出しを防ぐ
         const finalChordName = chordName.replace(/(\(b5\)|\(♭5\))/g, '\u200B$1');
 
         chordNameSpan.innerHTML = formatNoteHTML(finalChordName);
