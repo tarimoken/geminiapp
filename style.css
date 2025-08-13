@@ -49,6 +49,10 @@ body {
 .degree { background-color: #3b82f6; }
 .tension { background-color: #facc15; color: #1f2937; }
 .bass { background-color: #22c55e; }
+/* ▼▼▼ [追加] 5度の音を緑色にするためのスタイル ▼▼▼ */
+.fifth-degree { background-color: #10b981; color: white; }
+/* ▲▲▲ [追加] 5度の音を緑色にするためのスタイル ▲▲▲ */
+
 
 .root-outline {
     display: flex;
@@ -86,6 +90,16 @@ body {
     transform: scale(1.05); 
     border-color: #2563eb;
 }
+
+/* ▼▼▼ [追加] テンション追加ボタンがアクティブな時のスタイル ▼▼▼ */
+.control-btn.active-tension {
+    background-color: #facc15;
+    color: #1f2937;
+    transform: scale(1.05);
+    border-color: #eab308;
+}
+/* ▲▲▲ [追加] テンション追加ボタンがアクティブな時のスタイル ▲▲▲ */
+
 
 .diatonic-mode-btn {
     color: #4b5563;
@@ -300,11 +314,10 @@ button:disabled:hover {
     color: #1f2937;
     background-color: #f3f4f6;
     border-radius: 4px;
-    transition: background-color 0.2s; /* [追加] ホバーエフェクト用のトランジション */
-    cursor: pointer; /* [追加] クリック可能であることを示すカーソル */
+    transition: background-color 0.2s;
+    cursor: pointer;
 }
 
-/* [追加] キー名セルのホバーエフェクト */
 .diatonic-key-name-cell:hover {
     background-color: #e5e7eb;
 }
