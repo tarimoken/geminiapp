@@ -45,13 +45,13 @@ body {
     font-size: 0.7rem;
     z-index: 10;
 }
-.root { background-color: #ef4444; }
-.degree { background-color: #3b82f6; }
-.tension { background-color: #facc15; color: #1f2937; }
-.bass { background-color: #22c55e; }
-/* ▼▼▼ [追加] 5度の音を緑色にするためのスタイル ▼▼▼ */
-.fifth-degree { background-color: #10b981; color: white; }
-/* ▲▲▲ [追加] 5度の音を緑色にするためのスタイル ▲▲▲ */
+/* ▼▼▼ [変更] スタイル指定の優先度を明確化 ▼▼▼ */
+.highlight-circle.root { background-color: #ef4444; }
+.highlight-circle.degree { background-color: #3b82f6; }
+.highlight-circle.tension { background-color: #facc15; color: #1f2937; }
+.highlight-circle.bass { background-color: #22c55e; }
+.highlight-circle.fifth-degree { background-color: #10b981; color: white; }
+/* ▲▲▲ [変更] スタイル指定の優先度を明確化 ▲▲▲ */
 
 
 .root-outline {
@@ -91,14 +91,12 @@ body {
     border-color: #2563eb;
 }
 
-/* ▼▼▼ [追加] テンション追加ボタンがアクティブな時のスタイル ▼▼▼ */
 .control-btn.active-tension {
     background-color: #facc15;
     color: #1f2937;
     transform: scale(1.05);
     border-color: #eab308;
 }
-/* ▲▲▲ [追加] テンション追加ボタンがアクティブな時のスタイル ▲▲▲ */
 
 
 .diatonic-mode-btn {

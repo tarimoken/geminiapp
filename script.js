@@ -21,11 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
         'dim7': { name: 'Diminished 7th', intervals: [0, 3, 6, 9], degrees: ['R', '♭3', '♭5', '♭♭7'], notation: 'dim7' },
         '6':    { name: 'Major 6th', intervals: [0, 4, 7, 9], degrees: ['R', '3', '5', '6'], notation: '6' },
         'm6':   { name: 'Minor 6th', intervals: [0, 3, 7, 9], degrees: ['R', '♭3', '5', '6'], notation: 'm6' },
-        '9':    { name: 'Dominant 9th', intervals: [0, 4, 7, 10, 14], degrees: ['R', '3', '5', '♭7', '9'], notation: '9' },
-        'M9':   { name: 'Major 9th', intervals: [0, 4, 7, 11, 14], degrees: ['R', '3', '5', '7', '9'], notation: 'M9' },
-        'm9':   { name: 'Minor 9th', intervals: [0, 3, 7, 10, 14], degrees: ['R', '♭3', '5', '♭7', '9'], notation: 'm9' },
-        '7s9':  { name: '7th sharp 9', intervals: [0, 4, 7, 10, 15], degrees: ['R', '3', '5', '♭7', '♯9'], notation: '7(♯9)'},
-        '7b9':  { name: '7th flat 9', intervals: [0, 4, 7, 10, 13], degrees: ['R', '3', '5', '♭7', '♭9'], notation: '7(♭9)'},
     };
 
     const SCALES = {
@@ -33,14 +28,15 @@ document.addEventListener('DOMContentLoaded', () => {
         minorPentatonic: { name: 'Minor Pentatonic', intervals: [0, 3, 5, 7, 10] },
     };
     
-    // ▼▼▼ [追加] テンション追加ボタン用のデータ ▼▼▼
     const TENSION_OVERLAYS = {
-        '11': { interval: 5, name: '11' },    // 17 % 12
-        's11': { interval: 6, name: '♯11' },   // 18 % 12
-        '13': { interval: 9, name: '13' },    // 21 % 12
-        'b13': { interval: 8, name: '♭13' }   // 20 % 12
+        '9':   { interval: 2, name: '9' },    // 14 % 12
+        'b9':  { interval: 1, name: '♭9' },   // 13 % 12
+        's9':  { interval: 3, name: '♯9' },   // 15 % 12
+        '11':  { interval: 5, name: '11' },   // 17 % 12
+        's11': { interval: 6, name: '♯11' },  // 18 % 12
+        '13':  { interval: 9, name: '13' },   // 21 % 12
+        'b13': { interval: 8, name: '♭13' }  // 20 % 12
     };
-    // ▲▲▲ [追加] テンション追加ボタン用のデータ ▲▲▲
     
     const DIATONIC_CHORDS_MAJOR_TABLE = {
         'C':  ['CM7', 'Dm7', 'Em7', 'FM7', 'G7', 'Am7', 'Bm7(b5)'],
@@ -82,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const fretboardContainer = document.getElementById('fretboard-container');
     const fullChordNameDisplay = document.getElementById('full-chord-name-display');
     const combinedChordSelector = document.getElementById('combined-chord-selector');
-    const tensionOverlayControls = document.getElementById('tension-overlay-controls'); // [追加]
+    const tensionOverlayControls = document.getElementById('tension-overlay-controls');
     const bassNoteSelector = document.getElementById('bass-note-selector');
     const majorPentaToggle = document.getElementById('major-penta-toggle');
     const minorPentaToggle = document.getElementById('minor-penta-toggle');
@@ -110,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let state = {
         rootNote: null, chordType: null, bassNote: null,
         showMajorPenta: false, showMinorPenta: false, displayAsDegrees: false,
-        activeTensions: [], // [変更] テンションの状態を配列で管理
+        activeTensions: [],
         notationMode: 'flats',
         diatonicMode: 'major',
         mutedStrings: Array(STRING_COUNT).fill(false),
@@ -242,7 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const buttonOrder = [
             'Maj', 'min', 'm7b5', 'dim7', 'dim', '7', 'M7', 'm7',
-            '9', 'M9', 'm9', 'aug', 'sus2', 'sus4', '6', 'm6', '7b9', '7s9'
+            'aug', 'sus2', 'sus4', '6', 'm6'
         ];
 
         combinedChordSelector.innerHTML = '';
@@ -259,7 +255,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function addEventListeners() {
-        // ▼▼▼ [変更] イベントリスナーを整理 ▼▼▼
         document.getElementById('controls-container').addEventListener('click', (e) => {
             const btn = e.target.closest('.control-btn');
             if (btn && btn.dataset.key) {
@@ -386,7 +381,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const { key, value } = button.dataset;
         if (!key) return;
         
-        // ▼▼▼ [変更] ボタンのキーに応じて状態管理を分岐 ▼▼▼
         if (key === 'chordType') {
             state[key] = state[key] === value ? null : value;
         } else if (key === 'tension-overlay') {
@@ -397,7 +391,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 state.activeTensions.push(value);
             }
         }
-        // ▲▲▲ [変更] ボタンのキーに応じて状態管理を分岐 ▲▲▲
 
         updateControlsFromState();
         updateDisplay();
@@ -409,7 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state = { 
             rootNote: null, chordType: null, bassNote: null,
             showMajorPenta: false, showMinorPenta: false, displayAsDegrees: false,
-            activeTensions: [], // [変更] リセット対象に追加
+            activeTensions: [],
             notationMode: currentNotationMode, 
             diatonicMode: 'major',
             mutedStrings: Array(STRING_COUNT).fill(false),
@@ -441,12 +434,10 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.classList.toggle('active-chord', state[key] === value);
         });
 
-        // ▼▼▼ [追加] テンション追加ボタンの表示更新 ▼▼▼
         document.querySelectorAll('#tension-overlay-controls .control-btn').forEach(btn => {
             const { value } = btn.dataset;
             btn.classList.toggle('active-tension', state.activeTensions.includes(value));
         });
-        // ▲▲▲ [追加] テンション追加ボタンの表示更新 ▲▲▲
 
         bassNoteSelector.value = state.bassNote || '';
         majorPentaToggle.checked = state.showMajorPenta;
@@ -460,18 +451,16 @@ document.addEventListener('DOMContentLoaded', () => {
         degreeDisplayToggle.disabled = !isRootSelected;
         degreeToggleLabel.classList.toggle('toggle-label-disabled', !isRootSelected);
         
-        // ▼▼▼ [追加] テンション追加ボタンの有効/無効を切り替え ▼▼▼
         document.querySelectorAll('#tension-overlay-controls .control-btn').forEach(btn => {
             btn.disabled = !isRootSelected;
         });
-        // ▲▲▲ [追加] テンション追加ボタンの有効/無効を切り替え ▲▲▲
 
         if (!isRootSelected) {
             if (state.displayAsDegrees) {
                 state.displayAsDegrees = false;
                 degreeDisplayToggle.checked = false;
             }
-            state.activeTensions = []; // [追加] ルートがない場合はテンション選択を解除
+            state.activeTensions = [];
             updateControlsFromState();
         }
         
@@ -513,9 +502,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (bassNoteIndex !== -1) highlightBassNote(bassNoteIndex);
         }
         
-        // ▼▼▼ [追加] テンションオーバーレイのハイライト処理 ▼▼▼
         highlightTensionOverlays(rootNoteIndex);
-        // ▲▲▲ [追加] テンションオーバーレイのハイライト処理 ▲▲▲
         
         triggerPianoUpdate();
     }
@@ -597,8 +584,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function highlightChord(noteMap, rootNoteIndex) {
-        // ▼▼▼ [変更] 6度と7度をテンションの色分けから除外 ▼▼▼
-        const TENSION_DEGREE_NAMES = ['9', '♯9', '♭9', '♭♭7']; // 11, 13度などはコードに含まれる場合に適用
+        const TENSION_DEGREE_NAMES = ['9', '♯9', '♭9', '♭♭7'];
         const displayNotes = state.notationMode === 'flats' ? NOTES_FLAT : NOTES;
 
         for (let s = 0; s < STRING_COUNT; s++) {
@@ -619,14 +605,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (noteIndex === rootNoteIndex) {
                         highlight.classList.add('root');
                         if (state.displayAsDegrees) displayText = 'R';
-                    } else if (degreeText === '5') { // [追加] 5度の色分け
+                    } else if (degreeText === '5') {
                         highlight.classList.add('fifth-degree');
                     } else if (TENSION_DEGREE_NAMES.some(t => degreeText && degreeText.includes(t))) {
                         highlight.classList.add('tension');
                     } else {
                         highlight.classList.add('degree');
                     }
-                    // ▲▲▲ [変更] 色分けロジック ▲▲▲
 
                     highlight.innerHTML = formatNoteHTML(displayText);
                     cell.noteDisplay.appendChild(highlight);
@@ -635,9 +620,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // ▼▼▼ [追加] テンションオーバーレイをハイライトする専用関数 ▼▼▼
+    // ▼▼▼ [変更] ♭系テンションの音名表示ロジックを修正 ▼▼▼
     function highlightTensionOverlays(rootNoteIndex) {
         if (state.activeTensions.length === 0) return;
+
+        const currentDisplayNotes = state.notationMode === 'flats' ? NOTES_FLAT : NOTES;
 
         const tensionNotes = state.activeTensions.map(tensionKey => {
             const tensionData = TENSION_OVERLAYS[tensionKey];
@@ -663,13 +650,25 @@ document.addEventListener('DOMContentLoaded', () => {
                         cell.noteDisplay.appendChild(highlight);
                     }
                     
-                    highlight.classList.add('tension'); // 黄色に設定
-                    highlight.innerHTML = formatNoteHTML(state.displayAsDegrees ? matchedTension.name : NOTES[cell.noteIndex]);
+                    highlight.classList.add('tension');
+                    
+                    let noteNameToDisplay;
+                    const isFlatTension = matchedTension.name.includes('♭');
+
+                    if (isFlatTension) {
+                        // ♭系のテンション（♭9, ♭13）の場合、常にフラット系の音名（NOTES_FLAT）を使用
+                        noteNameToDisplay = NOTES_FLAT[cell.noteIndex];
+                    } else {
+                        // それ以外のテンションの場合、設定されている表記モード（シャープ/フラット）に従う
+                        noteNameToDisplay = currentDisplayNotes[cell.noteIndex];
+                    }
+                    
+                    highlight.innerHTML = formatNoteHTML(state.displayAsDegrees ? matchedTension.name : noteNameToDisplay);
                 }
             }
         }
     }
-    // ▲▲▲ [追加] テンションオーバーレイをハイライトする専用関数 ▲▲▲
+    // ▲▲▲ [変更] ♭系テンションの音名表示ロジックを修正 ▲▲▲
 
     function highlightBassNote(bassNoteIndex) {
         for (let s = 0; s < STRING_COUNT; s++) {
@@ -769,7 +768,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!chordData || !chordData.intervals) return;
         
         const allIntervals = new Set(chordData.intervals);
-        // [追加] ピアノにもテンションオーバーレイを反映
         state.activeTensions.forEach(key => {
             allIntervals.add(TENSION_OVERLAYS[key].interval)
         });
@@ -1054,11 +1052,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function findChord(noteIndexes) {
         const CHORD_DEFINITIONS = [
-            { key: 'M9', intervals: [0, 4, 7, 11, 14] },
-            { key: '9', intervals: [0, 4, 7, 10, 14] },
-            { key: 'm9', intervals: [0, 3, 7, 10, 14] },
-            { key: '7s9', intervals: [0, 4, 7, 10, 15] },
-            { key: '7b9', intervals: [0, 4, 7, 10, 13] },
             { key: 'dim7', intervals: [0, 3, 6, 9] },
             { key: 'm7b5', intervals: [0, 3, 6, 10] },
             { key: 'M7', intervals: [0, 4, 7, 11] },
